@@ -1,0 +1,39 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: shared-signals-transmitter
+
+  datasource:
+    url: jdbc:h2:mem:ssf_db;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    default-property-inclusion: non_null
+    deserialization:
+      accept-single-value-as-array: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://auth.nevzatcirak.com
+
+sharedsignals:
+  issuer: http://localhost:8080
+  features:
+    allow-multiple-streams-per-receiver: false
+  defaults:
+    inactivity-timeout: 2592000 # 30 days in seconds
+    max-description-length: 255
