@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RateLimitInterceptor implements HandlerInterceptor {
 
     // Minimum time (in milliseconds) required between two requests from the same IP.
-    private static final long MIN_INTERVAL_MS = 600;
+    private static final long MIN_INTERVAL_MS = 50;
 
     // Stores the timestamp of the last successful request for each IP.
     private final Map<String, Long> clientLastRequestTime = new ConcurrentHashMap<>();

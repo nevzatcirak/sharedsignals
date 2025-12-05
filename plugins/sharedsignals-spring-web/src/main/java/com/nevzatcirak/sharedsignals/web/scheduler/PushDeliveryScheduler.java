@@ -7,6 +7,7 @@ import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -34,9 +35,9 @@ public class PushDeliveryScheduler {
 
     private static final int BATCH_SIZE = 50;
 
-    public PushDeliveryScheduler(PushQueueService queueService) {
+    public PushDeliveryScheduler(PushQueueService queueService, RestTemplateBuilder restTemplateBuilder) {
         this.queueService = queueService;
-        this.restTemplate = new RestTemplate();
+        this.restTemplate = restTemplateBuilder.build();
     }
 
     /**
