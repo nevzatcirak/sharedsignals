@@ -2,6 +2,7 @@ package com.nevzatcirak.sharedsignals.boot.config;
 
 import com.nevzatcirak.sharedsignals.api.service.*;
 import com.nevzatcirak.sharedsignals.api.spi.PrivacyPolicyValidator;
+import com.nevzatcirak.sharedsignals.api.spi.PushQueueStore;
 import com.nevzatcirak.sharedsignals.core.privacy.DefaultPrivacyPolicyValidator;
 import com.nevzatcirak.sharedsignals.core.service.impl.*;
 import com.nevzatcirak.sharedsignals.api.spi.EventSender;
@@ -48,8 +49,10 @@ public class SharedSignalsCoreConfiguration {
     }
 
     @Bean
-    public DefaultJwkSetService jwkSetService() {
-        return new DefaultJwkSetService();
+    public DefaultJwkSetService jwkSetService(
+            @Value("${sharedsignals.security.signing-key:#{null}}") String signingKey,
+            @Value("${sharedsignals.security.signing-key-id:ssf-key-1}") String keyId) {
+        return new DefaultJwkSetService(signingKey, keyId);
     }
 
     @Bean
@@ -100,5 +103,10 @@ public class SharedSignalsCoreConfiguration {
     @ConditionalOnMissingBean
     public PrivacyPolicyValidator privacyPolicyValidator() {
         return new DefaultPrivacyPolicyValidator();
+    }
+
+    @Bean
+    public PushQueueService pushQueueService(PushQueueStore pushQueueStore) {
+        return new DefaultPushQueueService(pushQueueStore);
     }
 }

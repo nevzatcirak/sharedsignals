@@ -13,17 +13,17 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * REST Controller for POLL-based event delivery.
- * <p>
- * Implements RFC 8936: Poll-Based Security Event Token (SET) Delivery Using HTTP
+ * Implements RFC 8936 with Non-Blocking Async support.
  */
 @RestController
 @RequestMapping("/ssf/events")
 public class EventsController {
 
     private static final Logger log = LoggerFactory.getLogger(EventsController.class);
-
     private final EventRetrievalService eventRetrievalService;
     private final InactivityTimeoutService inactivityService;
     private final PollMapper pollMapper;
@@ -38,33 +38,25 @@ public class EventsController {
     }
 
     /**
-     * Polls for events from a stream.
-     * <p>
-     * RFC 8936 Section 2.2: Poll Request
-     * <p>
-     * SSF Spec 8.1.1: Polling constitutes eligible Receiver activity (resets inactivity timer).
+     * Polls for events asynchronously.
      *
-     * @param streamId the stream identifier (path variable)
-     * @param request the poll request (optional body with ack, setErrs, maxEvents, returnImmediately)
-     * @return poll response containing events and moreAvailable flag
+     * @param streamId the stream identifier
+     * @param request the poll request
+     * @return A CompletableFuture resolving to the Poll Response
      */
     @PostMapping("/poll/{streamId}")
-    public ResponseEntity<SSFPollResponse> pollEvents(
+    public CompletableFuture<ResponseEntity<SSFPollResponse>> pollEvents(
             @PathVariable("streamId") String streamId,
             @RequestHeader(value = HttpHeaders.CONTENT_LANGUAGE, required = false) String contentLanguage,
             @RequestBody(required = false) SSFPollRequest request) {
 
-        if (contentLanguage != null && request != null && request.getSetErrs() != null && !request.getSetErrs().isEmpty()) {
-            log.info("Processing Poll Errors for Stream [{}] in language: {}", streamId, contentLanguage);
-        }
-
         if (request == null) {
             request = new SSFPollRequest();
         }
+
         inactivityService.recordActivity(streamId);
         PollCommand command = pollMapper.toCommand(request);
-        PollResult result = eventRetrievalService.pollEvents(streamId, command);
-
-        return ResponseEntity.ok(pollMapper.toResponse(result));
+        return eventRetrievalService.pollEventsAsync(streamId, command)
+                .thenApply(result -> ResponseEntity.ok(pollMapper.toResponse(result)));
     }
 }

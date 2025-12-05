@@ -3,20 +3,22 @@ server:
 
 spring:
   application:
-    name: shared-signals-transmitter
-
+    name: sharedsignals-transmitter
   datasource:
-    url: jdbc:h2:mem:ssf_db;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:mem:sharedsignals;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driverClassName: org.h2.Driver
     username: sa
-    password:
-    driver-class-name: org.h2.Driver
-
+    password: password
   jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
+      # 'update' ensures tables (including 'shedlock' and 'ssf_push_queue') are created automatically
       ddl-auto: update
-    properties:
-      hibernate:
-        format_sql: true
+    show-sql: false
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
 
   jackson:
     property-naming-strategy: SNAKE_CASE
@@ -31,19 +33,24 @@ spring:
           issuer-uri: https://auth.nevzatcirak.com
 
 sharedsignals:
-  issuer: http://localhost:8080
+  # The Issuer URL identified in the .well-known configuration
+  issuer: "http://localhost:8080"
+
   features:
     allow-multiple-streams-per-receiver: false
     inactivity-timeout-check-enabled: true
     event-buffer-cleanup-enabled: true
+    # Enable the Outbox Scheduler for Push Delivery
+    push-delivery-enabled: true
+    # Enable Grace Period cleanup
+    grace-period-cleanup-enabled: true
+
   # POLL Delivery Configuration (RFC 8936)
   poll:
     # How long to keep acknowledged events (days)
     acknowledged-event-retention-days: 7
-
     # Maximum events to return in a single poll (default if not specified in request)
     default-max-events: 10
-
     # Maximum allowed maxEvents value in poll request
     max-events-limit: 100
   scheduler:
@@ -52,12 +59,26 @@ sharedsignals:
     grace-period-cleanup-interval: 86400000  # 24 hours
     grace-period-cleanup-initial-delay: 3600000  # 1 hour
     event-cleanup-cron: "0 0 2 * * ?"  # 2 AM daily
+    # Push Delivery Outbox Processor frequency (1000 ms = 1 second)
+    # Lower values = Lower latency for push events
+    push-delivery-interval: 1000
 
   # Privacy and Security Features (SSF Sections 9 & 10)
   security:
     # SSF Section 9.3: Malicious Subject Removal protection
     subject-removal-grace-period: 604800  # 7 days
     grace-period-cleanup-enabled: true
+    # subject-removal-grace-period: 604800 (7 days)
+
+    # PRODUCTION SETTING:
+    # Base64 encoded PKCS#8 RSA Private Key.
+    # If left empty, the application will generate a RANDOM key on startup (DEV Mode).
+    # To generate: openssl genpkey -algorithm RSA -out priv.pem -pkeyopt rsa_keygen_bits:2048
+    #              cat priv.pem | grep -v "BEGIN" | grep -v "END" | tr -d '\n'
+    signing-key: ""
+
+    # The Key ID (kid) to expose in JWKS. Should match the key above.
+    signing-key-id: "ssf-dev-key-1"
   privacy:
     # SSF Section 10: Privacy Considerations
     # To implement custom privacy validation:
@@ -73,3 +94,10 @@ sharedsignals:
   defaults:
     inactivity-timeout: 2592000  # 30 days
     max-description-length: 255
+
+logging:
+  level:
+    com.nevzatcirak.sharedsignals: DEBUG
+    org.springframework.web: INFO
+    # Enable to see ShedLock locking activity
+    net.javacrumbs.shedlock: INFO

@@ -2,7 +2,6 @@ package com.nevzatcirak.sharedsignals.core.service.impl;
 
 import com.nevzatcirak.sharedsignals.api.model.PollCommand;
 import com.nevzatcirak.sharedsignals.api.model.PollResult;
-import com.nevzatcirak.sharedsignals.api.model.StreamConfiguration;
 import com.nevzatcirak.sharedsignals.api.service.EventRetrievalService;
 import com.nevzatcirak.sharedsignals.api.spi.StreamStore;
 import com.nevzatcirak.sharedsignals.api.exception.StreamNotFoundException;
@@ -10,30 +9,35 @@ import com.nevzatcirak.sharedsignals.api.exception.SsfBadRequestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class DefaultEventRetrievalService implements EventRetrievalService {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultEventRetrievalService.class);
     private final StreamStore streamStore;
 
+    // Dedicated Executor for Polling to avoid blocking Servlet threads
+    private final ExecutorService pollExecutor = Executors.newCachedThreadPool();
+
     private static final long LONG_POLL_TIMEOUT_MS = 20_000;
-    private static final long POLL_INTERVAL_MS = 2_000;
+    private static final long POLL_INTERVAL_MS = 1_000;
 
     public DefaultEventRetrievalService(StreamStore streamStore) {
         this.streamStore = streamStore;
     }
 
     @Override
-    public PollResult pollEvents(String streamId, PollCommand command) {
+    public CompletableFuture<PollResult> pollEventsAsync(String streamId, PollCommand command) {
         if (command.getMaxEvents() < 0) {
             throw new SsfBadRequestException("maxEvents cannot be negative.");
         }
 
-        // Validate stream exists
+        // Validate stream exists (Fast check)
         streamStore.findById(streamId)
                 .orElseThrow(() -> new StreamNotFoundException(streamId));
 
@@ -49,26 +53,32 @@ public class DefaultEventRetrievalService implements EventRetrievalService {
             handleSetErrors(streamId, command.getErrorIds());
         }
 
-        Map<String, String> events = Collections.emptyMap();
+        // Offload the waiting logic to a separate thread
+        return CompletableFuture.supplyAsync(() -> performPoll(streamId, command), pollExecutor);
+    }
+
+    private PollResult performPoll(String streamId, PollCommand command) {
         long startTime = System.currentTimeMillis();
+        Map<String, String> events = Collections.emptyMap();
 
-        while (true) {
-            if (command.getMaxEvents() == 0) {
-                break;
+        try {
+            while (true) {
+                if (command.getMaxEvents() == 0) break;
+
+                events = streamStore.fetchEvents(streamId, command.getMaxEvents());
+
+                // Return if events found OR immediate return requested OR timeout
+                if (!events.isEmpty() || command.isReturnImmediately() ||
+                   (System.currentTimeMillis() - startTime > LONG_POLL_TIMEOUT_MS)) {
+                    break;
+                }
+
+                // Short sleep is acceptable here because we are in a dedicated Async Thread,
+                // NOT the Web Server (Tomcat) thread.
+                TimeUnit.MILLISECONDS.sleep(POLL_INTERVAL_MS);
             }
-
-            events = streamStore.fetchEvents(streamId, command.getMaxEvents());
-
-            if (!events.isEmpty() || command.isReturnImmediately() || (System.currentTimeMillis() - startTime > LONG_POLL_TIMEOUT_MS)) {
-                break;
-            }
-
-            try {
-                Thread.sleep(POLL_INTERVAL_MS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
-            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
 
         // RFC 8936 Section 2.3: Check if more events available
@@ -92,19 +102,7 @@ public class DefaultEventRetrievalService implements EventRetrievalService {
         for (Map.Entry<String, PollCommand.PollError> entry : errors.entrySet()) {
             String jti = entry.getKey();
             PollCommand.PollError error = entry.getValue();
-
-            log.error("SET error reported by receiver: stream={}, jti={}, err={}, description={}",
-                    streamId, jti, error.getCode(), error.getDescription());
-
-            // TODO: Implement error handling strategy
-            // Options:
-            // 1. Remove event from buffer (if error is unrecoverable)
-            // 2. Retry later (if error is transient)
-            // 3. Alert monitoring system
-            // 4. Store error for analytics
-
-            // For now: Acknowledge the event to remove it from buffer
-            // (assumes errors are permanent and event should be discarded)
+            log.error("SET error reported: stream={}, jti={}, err={}", streamId, jti, error.getCode());
             streamStore.acknowledgeEvents(streamId, java.util.List.of(jti));
         }
     }

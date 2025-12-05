@@ -1,6 +1,7 @@
 package com.nevzatcirak.sharedsignals.web.scheduler;
 
 import com.nevzatcirak.sharedsignals.api.spi.StreamStore;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -41,9 +42,9 @@ public class GracePeriodCleanupScheduler {
             fixedDelayString = "${sharedsignals.scheduler.grace-period-cleanup-interval:86400000}",
             initialDelayString = "${sharedsignals.scheduler.grace-period-cleanup-initial-delay:3600000}"
     )
+    @SchedulerLock(name = "GracePeriodCleanupScheduler_cleanup", lockAtMostFor = "1h", lockAtLeastFor = "5m")
     public void cleanupExpiredGracePeriods() {
         log.debug("Starting grace period cleanup");
-
         try {
             streamStore.deleteByGracePeriodExpiresAtBefore(Instant.now());
         } catch (Exception e) {

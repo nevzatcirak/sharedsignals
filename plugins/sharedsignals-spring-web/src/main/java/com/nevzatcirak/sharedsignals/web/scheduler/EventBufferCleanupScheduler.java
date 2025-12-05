@@ -1,6 +1,7 @@
 package com.nevzatcirak.sharedsignals.web.scheduler;
 
 import com.nevzatcirak.sharedsignals.api.spi.StreamStore;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,7 +25,6 @@ import java.time.Instant;
 public class EventBufferCleanupScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(EventBufferCleanupScheduler.class);
-
     private final StreamStore streamStore;
     private final int retentionDays;
 
@@ -41,9 +41,9 @@ public class EventBufferCleanupScheduler {
      * Default: Runs daily at 2 AM
      */
     @Scheduled(cron = "${sharedsignals.scheduler.event-cleanup-cron:0 0 2 * * ?}")
+    @SchedulerLock(name = "EventBufferCleanupScheduler_cleanup", lockAtMostFor = "1h", lockAtLeastFor = "5m")
     public void cleanupAcknowledgedEvents() {
         log.info("Starting event buffer cleanup (retention: {} days)", retentionDays);
-
         try {
             Instant cutoffTime = Instant.now().minusSeconds(retentionDays * 86400L);
 

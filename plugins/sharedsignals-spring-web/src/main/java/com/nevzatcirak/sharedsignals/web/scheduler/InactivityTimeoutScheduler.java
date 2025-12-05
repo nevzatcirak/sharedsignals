@@ -1,6 +1,7 @@
 package com.nevzatcirak.sharedsignals.web.scheduler;
 
 import com.nevzatcirak.sharedsignals.api.service.InactivityTimeoutService;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -51,6 +52,7 @@ public class InactivityTimeoutScheduler {
             fixedDelayString = "${sharedsignals.scheduler.inactivity-check-interval:300000}",
             initialDelayString = "${sharedsignals.scheduler.inactivity-check-initial-delay:60000}"
     )
+    @SchedulerLock(name = "InactivityTimeoutScheduler_checkInactiveStreams", lockAtMostFor = "5m", lockAtLeastFor = "1m")
     public void checkInactiveStreams() {
         log.debug("Starting scheduled inactivity timeout check");
 
