@@ -13,6 +13,16 @@ import org.slf4j.LoggerFactory;
  * Default implementation of SubjectManagementService.
  * <p>
  * Implements SSF Draft Spec Section 8.1.3 (Subject Management).
+ * <p>
+ * <b>Security Considerations (SSF Section 9):</b>
+ * <ul>
+ *   <li><b>9.1 Subject Probing:</b> This implementation uses silent ignore to prevent
+ *       information leakage. Returns 200 OK even if subject is not actually added.</li>
+ *   <li><b>9.2 Information Harvesting:</b> Validates subjects and checks opt-out status
+ *       before adding. Transmitters should only send events they are authorized to share.</li>
+ *   <li><b>9.3 Malicious Removal:</b> Subject removal is recorded with grace period support
+ *       to continue sending events temporarily after removal.</li>
+ * </ul>
  */
 public class DefaultSubjectManagementService implements SubjectManagementService {
 

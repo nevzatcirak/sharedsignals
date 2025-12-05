@@ -57,6 +57,10 @@ public final class SharedSignalConstants {
     public static final String RISC_OPT_OUT = "https://schemas.openid.net/secevent/risc/event-type/opt-out";
     public static final String RISC_VERIFICATION = "https://schemas.openid.net/secevent/risc/event-type/verification";
 
+    // SSF Event Types
+    public static final String SSF_VERIFICATION = "https://schemas.openid.net/secevent/ssf/event-type/verification";
+    public static final String SSF_STREAM_UPDATED = "https://schemas.openid.net/secevent/ssf/event-type/stream-updated";
+
     // --- Subject Formats ---
     public static final String FORMAT_EMAIL = "email";
     public static final String FORMAT_ISSUER_SUBJECT = "iss_sub";

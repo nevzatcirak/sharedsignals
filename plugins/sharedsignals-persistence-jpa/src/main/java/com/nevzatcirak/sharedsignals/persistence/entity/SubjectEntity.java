@@ -28,4 +28,28 @@ public class SubjectEntity {
     public void setSubjectPayload(String subjectPayload) { this.subjectPayload = subjectPayload; }
     public void setSubjectHash(String subjectHash) { this.subjectHash = subjectHash; }
     public void setVerified(boolean verified) { this.verified = verified; }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public StreamEntity getStream() {
+        return stream;
+    }
+
+    public String getSubjectPayload() {
+        return subjectPayload;
+    }
+
+    public String getSubjectHash() {
+        return subjectHash;
+    }
+
+    public boolean isVerified() {
+        return verified;
+    }
 }

@@ -1,6 +1,8 @@
 package com.nevzatcirak.sharedsignals.boot.config;
 
 import com.nevzatcirak.sharedsignals.api.service.*;
+import com.nevzatcirak.sharedsignals.api.spi.PrivacyPolicyValidator;
+import com.nevzatcirak.sharedsignals.core.privacy.DefaultPrivacyPolicyValidator;
 import com.nevzatcirak.sharedsignals.core.service.impl.*;
 import com.nevzatcirak.sharedsignals.api.spi.EventSender;
 import com.nevzatcirak.sharedsignals.api.spi.StreamStore;
@@ -22,13 +24,15 @@ public class SharedSignalsCoreConfiguration {
             @Value("${sharedsignals.issuer}") String issuerUrl,
             @Value("${sharedsignals.defaults.inactivity-timeout:2592000}") int defaultInactivityTimeout,
             @Value("${sharedsignals.features.allow-multiple-streams-per-receiver:false}") boolean allowMultipleStreams,
-            @Value("${sharedsignals.defaults.max-description-length:255}") int maxDescriptionLength) {
+            @Value("${sharedsignals.defaults.max-description-length:255}") int maxDescriptionLength,
+            InactivityTimeoutService inactivityService) {
         return new DefaultStreamConfigurationService(
                 streamStore,
                 issuerUrl,
                 defaultInactivityTimeout,
                 allowMultipleStreams,
-                maxDescriptionLength
+                maxDescriptionLength,
+                inactivityService
         );
     }
 
@@ -44,21 +48,15 @@ public class SharedSignalsCoreConfiguration {
     }
 
     @Bean
-    public DefaultJwkSetService defaultJwkSetService() {
+    public DefaultJwkSetService jwkSetService() {
         return new DefaultJwkSetService();
-    }
-
-    @Bean
-    public JwkSetService jwkSetService(DefaultJwkSetService service) {
-        return service;
     }
 
     @Bean
     public TokenSigningService tokenSigningService(
             @Value("${sharedsignals.issuer}") String issuer,
             DefaultJwkSetService jwkSetService) throws Exception {
-
-        DefaultTokenSigningService signer = new DefaultTokenSigningService(issuer, jwkSetService);
+        DefaultTokenSigningService signer = new DefaultTokenSigningService(issuer);
         signer.setSigningKey(jwkSetService.getRsaKey());
         return signer;
     }
@@ -67,22 +65,40 @@ public class SharedSignalsCoreConfiguration {
     public EventPublisherService eventPublisherService(
             StreamStore streamStore,
             TokenSigningService signingService,
-            EventSender eventSender) {
-        return new DefaultEventPublisherService(streamStore, signingService, eventSender);
+            EventSender eventSender,
+            PrivacyPolicyValidator privacyValidator) {
+        return new DefaultEventPublisherService(streamStore, signingService, eventSender, privacyValidator);
     }
 
     @Bean
-    public StreamStatusService streamStatusService(StreamStore streamStore) {
-        return new DefaultStreamStatusService(streamStore);
+    public StreamStatusService streamStatusService(
+            StreamStore streamStore,
+            EventPublisherService eventPublisher) {
+        return new DefaultStreamStatusService(streamStore, eventPublisher);
     }
 
     @Bean
-    public VerificationService verificationService(EventPublisherService eventPublisher, StreamStore streamStore) {
+    public VerificationService verificationService(
+            EventPublisherService eventPublisher,
+            StreamStore streamStore) {
         return new DefaultVerificationService(eventPublisher, streamStore);
     }
 
     @Bean
     public EventRetrievalService eventRetrievalService(StreamStore streamStore) {
         return new DefaultEventRetrievalService(streamStore);
+    }
+
+    @Bean
+    public InactivityTimeoutService inactivityTimeoutService(
+            StreamStore streamStore, StreamStatusService streamStatusService
+            ) {
+        return new DefaultInactivityTimeoutService(streamStore, streamStatusService);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public PrivacyPolicyValidator privacyPolicyValidator() {
+        return new DefaultPrivacyPolicyValidator();
     }
 }

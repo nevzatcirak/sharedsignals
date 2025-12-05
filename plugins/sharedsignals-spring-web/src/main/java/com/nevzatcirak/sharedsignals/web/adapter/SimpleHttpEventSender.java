@@ -3,7 +3,7 @@ package com.nevzatcirak.sharedsignals.web.adapter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nevzatcirak.sharedsignals.api.constant.IanaSetErrorCodes;
 import com.nevzatcirak.sharedsignals.api.constant.SharedSignalConstants;
-import com.nevzatcirak.sharedsignals.api.service.StreamStatusService;
+import com.nevzatcirak.sharedsignals.api.exception.EventsDeliveredFailureException;
 import com.nevzatcirak.sharedsignals.api.spi.EventSender;
 import com.nevzatcirak.sharedsignals.web.model.SetErrorResponse;
 import org.slf4j.Logger;
@@ -30,7 +30,6 @@ public class SimpleHttpEventSender implements EventSender {
     private static final Logger log = LoggerFactory.getLogger(SimpleHttpEventSender.class);
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-    private final StreamStatusService streamStatusService;
 
     private static final int MAX_RETRIES = 5;
     private static final long INITIAL_BACKOFF_MS = 1000;
@@ -41,9 +40,8 @@ public class SimpleHttpEventSender implements EventSender {
             IanaSetErrorCodes.INVALID_ISSUER
     );
 
-    public SimpleHttpEventSender(ObjectMapper objectMapper, StreamStatusService streamStatusService, RestTemplateBuilder builder) {
+    public SimpleHttpEventSender(ObjectMapper objectMapper, RestTemplateBuilder builder) {
         this.objectMapper = objectMapper;
-        this.streamStatusService = streamStatusService;
 
         this.restTemplate = builder
                 .connectTimeout(Duration.ofSeconds(5))
@@ -129,11 +127,7 @@ public class SimpleHttpEventSender implements EventSender {
         }
         if (reason != null) {
             log.warn("Pausing Stream [{}] due to fatal error: {}", streamId, reason);
-            try {
-                streamStatusService.updateStatus(streamId, "paused", reason);
-            } catch (Exception updateEx) {
-                log.error("Failed to pause stream [{}]: {}", streamId, updateEx.getMessage());
-            }
+            throw new EventsDeliveredFailureException(reason);
         }
     }
     private SetErrorResponse parseErrorResponse(RestClientResponseException ex) {

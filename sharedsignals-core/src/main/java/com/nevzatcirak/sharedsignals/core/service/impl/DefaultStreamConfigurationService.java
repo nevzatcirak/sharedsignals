@@ -3,13 +3,10 @@ package com.nevzatcirak.sharedsignals.core.service.impl;
 import com.nevzatcirak.sharedsignals.api.model.StreamConfiguration;
 import com.nevzatcirak.sharedsignals.api.model.StreamDelivery;
 import com.nevzatcirak.sharedsignals.api.service.StreamConfigurationService;
+import com.nevzatcirak.sharedsignals.api.service.InactivityTimeoutService;
 import com.nevzatcirak.sharedsignals.api.constant.SharedSignalConstants;
 import com.nevzatcirak.sharedsignals.api.spi.StreamStore;
-import com.nevzatcirak.sharedsignals.api.exception.StreamNotFoundException;
-import com.nevzatcirak.sharedsignals.api.exception.StreamAlreadyExistsException;
-import com.nevzatcirak.sharedsignals.api.exception.EventsDeliveredMismatchException;
-import com.nevzatcirak.sharedsignals.api.exception.SsfBadRequestException;
-import com.nevzatcirak.sharedsignals.api.exception.SsfSecurityException;
+import com.nevzatcirak.sharedsignals.api.exception.*;
 import com.nevzatcirak.sharedsignals.core.security.SecureUrlValidator;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,18 +23,21 @@ public class DefaultStreamConfigurationService implements StreamConfigurationSer
     private final int defaultInactivityTimeout;
     private final boolean allowMultipleStreamsPerReceiver;
     private final int maxDescriptionLength;
+    private final InactivityTimeoutService inactivityService;
 
     public DefaultStreamConfigurationService(
             StreamStore streamStore,
             String issuerUrl,
             int defaultInactivityTimeout,
             boolean allowMultipleStreamsPerReceiver,
-            int maxDescriptionLength) {
+            int maxDescriptionLength,
+            InactivityTimeoutService inactivityService) {
         this.streamStore = streamStore;
         this.issuerUrl = issuerUrl.endsWith("/") ? issuerUrl.substring(0, issuerUrl.length() - 1) : issuerUrl;
         this.defaultInactivityTimeout = defaultInactivityTimeout;
         this.allowMultipleStreamsPerReceiver = allowMultipleStreamsPerReceiver;
         this.maxDescriptionLength = maxDescriptionLength;
+        this.inactivityService = inactivityService;
     }
 
     @Override
@@ -69,7 +69,9 @@ public class DefaultStreamConfigurationService implements StreamConfigurationSer
     computeEventsDelivered(request);
     configureDelivery(request);
 
-    return streamStore.save(request);
+    StreamConfiguration saved = streamStore.save(request);
+    inactivityService.initializeStreamActivity(saved.getStream_id());
+    return saved;
     }
 
     @Override
@@ -150,6 +152,8 @@ public class DefaultStreamConfigurationService implements StreamConfigurationSer
     public void deleteStream(String streamId, String owner) {
         findAndValidateOwner(streamId, owner);
         streamStore.deleteById(streamId);
+
+        inactivityService.removeStreamActivity(streamId);
     }
 
     /**

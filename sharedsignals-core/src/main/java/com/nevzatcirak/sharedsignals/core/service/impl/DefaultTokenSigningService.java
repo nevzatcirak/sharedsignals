@@ -17,13 +17,11 @@ import java.util.UUID;
 public class DefaultTokenSigningService implements TokenSigningService {
 
     private final String issuer;
-    private final JwkSetService jwkSetService;
     private JWSSigner signer;
     private String keyId;
 
-    public DefaultTokenSigningService(String issuer, JwkSetService jwkSetService) {
+    public DefaultTokenSigningService(String issuer) {
         this.issuer = issuer;
-        this.jwkSetService = jwkSetService;
     }
 
     public void setSigningKey(com.nimbusds.jose.jwk.RSAKey rsaKey) throws JOSEException {

@@ -34,6 +34,42 @@ sharedsignals:
   issuer: http://localhost:8080
   features:
     allow-multiple-streams-per-receiver: false
+    inactivity-timeout-check-enabled: true
+    event-buffer-cleanup-enabled: true
+  # POLL Delivery Configuration (RFC 8936)
+  poll:
+    # How long to keep acknowledged events (days)
+    acknowledged-event-retention-days: 7
+
+    # Maximum events to return in a single poll (default if not specified in request)
+    default-max-events: 10
+
+    # Maximum allowed maxEvents value in poll request
+    max-events-limit: 100
+  scheduler:
+    inactivity-check-interval: 300000  # 5 minutes
+    inactivity-check-initial-delay: 60000  # 1 minute
+    grace-period-cleanup-interval: 86400000  # 24 hours
+    grace-period-cleanup-initial-delay: 3600000  # 1 hour
+    event-cleanup-cron: "0 0 2 * * ?"  # 2 AM daily
+
+  # Privacy and Security Features (SSF Sections 9 & 10)
+  security:
+    # SSF Section 9.3: Malicious Subject Removal protection
+    subject-removal-grace-period: 604800  # 7 days
+    grace-period-cleanup-enabled: true
+  privacy:
+    # SSF Section 10: Privacy Considerations
+    # To implement custom privacy validation:
+    # 1. Create a class implementing PrivacyPolicyValidator
+    # 2. Register it as a @Bean (replaces DefaultPrivacyPolicyValidator)
+    # 3. Integrate with your consent management system
+
+    # Example: Enable strict privacy mode (reject if no explicit consent)
+    strict-mode: false
+
+    # Log privacy validation failures (useful for debugging)
+    log-privacy-denials: true
   defaults:
-    inactivity-timeout: 2592000 # 30 days in seconds
+    inactivity-timeout: 2592000  # 30 days
     max-description-length: 255

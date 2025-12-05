@@ -7,18 +7,19 @@ import com.nevzatcirak.sharedsignals.api.exception.*;
 import com.nevzatcirak.sharedsignals.api.model.StreamConfiguration;
 import com.nevzatcirak.sharedsignals.api.model.StreamDelivery;
 import com.nevzatcirak.sharedsignals.api.spi.StreamStore;
-import com.nevzatcirak.sharedsignals.persistence.entity.DeliveryEmbeddable;
-import com.nevzatcirak.sharedsignals.persistence.entity.StreamEntity;
-import com.nevzatcirak.sharedsignals.persistence.entity.StreamEventEntity;
-import com.nevzatcirak.sharedsignals.persistence.entity.SubjectEntity;
-import com.nevzatcirak.sharedsignals.persistence.repository.StreamEventRepository;
-import com.nevzatcirak.sharedsignals.persistence.repository.StreamRepository;
-import com.nevzatcirak.sharedsignals.persistence.repository.SubjectRepository;
+import com.nevzatcirak.sharedsignals.core.service.impl.DefaultEventRetrievalService;
+import com.nevzatcirak.sharedsignals.persistence.entity.*;
+import com.nevzatcirak.sharedsignals.persistence.repository.*;
 import com.nevzatcirak.sharedsignals.persistence.util.SubjectHashUtil;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -28,23 +29,31 @@ import java.util.stream.Collectors;
 @Component
 public class JpaStreamStoreAdapter implements StreamStore {
 
+    private static final Logger log = LoggerFactory.getLogger(JpaStreamStoreAdapter.class);
     private final StreamRepository streamRepository;
     private final SubjectRepository subjectRepository;
-    private final StreamEventRepository eventRepository;
+    private final RemovedSubjectRepository removedSubjectRepository;
+    private final StreamEventRepository streamEventRepository;
     private final SubjectHashUtil subjectHashUtil;
     private final ObjectMapper objectMapper;
+    private final int subjectRemovalGracePeriodSeconds;
 
 
-    public JpaStreamStoreAdapter(StreamRepository streamRepository,
-                                 SubjectRepository subjectRepository,
-                                 StreamEventRepository eventRepository,
-                                 SubjectHashUtil subjectHashUtil,
-                                 ObjectMapper objectMapper) {
+    public JpaStreamStoreAdapter(
+            StreamRepository streamRepository,
+            SubjectRepository subjectRepository,
+            RemovedSubjectRepository removedSubjectRepository,
+            StreamEventRepository streamEventRepository,
+            SubjectHashUtil subjectHashUtil,
+            ObjectMapper objectMapper,
+            @Value("${sharedsignals.security.subject-removal-grace-period:604800}") int gracePeriodSeconds) {
         this.streamRepository = streamRepository;
         this.subjectRepository = subjectRepository;
-        this.eventRepository = eventRepository;
+        this.removedSubjectRepository = removedSubjectRepository;
+        this.streamEventRepository = streamEventRepository;  // ← Renamed
         this.subjectHashUtil = subjectHashUtil;
         this.objectMapper = objectMapper;
+        this.subjectRemovalGracePeriodSeconds = gracePeriodSeconds;
     }
 
     @Override
@@ -144,6 +153,47 @@ public class JpaStreamStoreAdapter implements StreamStore {
     public void removeSubject(String streamId, Map<String, Object> subject) {
         String hash = subjectHashUtil.computeHash(subject);
         subjectRepository.findByStreamStreamIdAndSubjectHash(streamId, hash).ifPresent(subjectRepository::delete);
+
+        String subjectHash = subjectHashUtil.computeHash(subject);
+
+        SubjectEntity subjectEntity = subjectRepository
+                .findByStreamStreamIdAndSubjectHash(streamId, subjectHash)
+                .orElseThrow(() -> new StreamNotFoundException(
+                        "Subject not found in stream: " + streamId));
+
+        RemovedSubjectEntity removedSubject = new RemovedSubjectEntity();
+        removedSubject.setStreamId(streamId);
+        removedSubject.setSubjectHash(subjectHash);
+        removedSubject.setSubjectPayload(subjectEntity.getSubjectPayload());
+        removedSubject.setRemovedAt(Instant.now());
+        removedSubject.setGracePeriodExpiresAt(
+                Instant.now().plusSeconds(subjectRemovalGracePeriodSeconds)
+        );
+
+        removedSubjectRepository.save(removedSubject);
+        // Remove from active subjects
+        subjectRepository.delete(subjectEntity);
+
+        log.info("Subject removed from stream {} with grace period until {}",
+                streamId, removedSubject.getGracePeriodExpiresAt());
+
+    }
+
+    @Override
+    public boolean isSubjectInGracePeriod(String streamId, Map<String, Object> subject) {
+        String subjectHash = subjectHashUtil.computeHash(subject);
+        return removedSubjectRepository
+                .findActiveGracePeriod(streamId, subjectHash, Instant.now())
+                .isPresent();
+    }
+
+    @Override
+    public void deleteByGracePeriodExpiresAtBefore(Instant expiryTime) {
+        int expiredSize = removedSubjectRepository.findExpiredGracePeriods(expiryTime).size();
+        if(expiredSize > 0){
+            removedSubjectRepository.deleteByGracePeriodExpiresAtBefore(expiryTime);
+            log.info("Cleaned up {} expired grace period subjects", expiredSize);
+        }
     }
 
     @Override
@@ -152,31 +202,64 @@ public class JpaStreamStoreAdapter implements StreamStore {
     }
 
     @Override
-    @Transactional
     public void saveEvent(String streamId, String jti, String setToken) {
-        StreamEventEntity entity = new StreamEventEntity();
-        entity.setStreamId(streamId);
-        entity.setJti(jti);
-        entity.setSetToken(setToken);
-        eventRepository.save(entity);
+        log.debug("Saving event to buffer: stream={}, jti={}", streamId, jti);
+
+        StreamEventEntity event = new StreamEventEntity();
+        event.setStreamId(streamId);
+        event.setJti(jti);
+        event.setSetToken(setToken);
+
+        streamEventRepository.save(event);
+
+        log.info("Event buffered for POLL delivery: stream={}, jti={}", streamId, jti);
     }
 
     @Override
     public Map<String, String> fetchEvents(String streamId, int maxEvents) {
-        int limit = (maxEvents <= 0) ? 10 : maxEvents;
-        List<StreamEventEntity> events = eventRepository.findByStreamIdOrderByCreatedAtAsc(streamId, PageRequest.of(0, limit));
-        return events.stream().collect(Collectors.toMap(StreamEventEntity::getJti, StreamEventEntity::getSetToken));
+        log.debug("Fetching events from buffer: stream={}, maxEvents={}", streamId, maxEvents);
+
+        List<StreamEventEntity> events = streamEventRepository.findUnacknowledgedEvents(
+                streamId,
+                Pageable.ofSize(maxEvents)
+        );
+
+        Map<String, String> result = new LinkedHashMap<>();
+        for (StreamEventEntity event : events) {
+            result.put(event.getJti(), event.getSetToken());
+        }
+
+        log.info("Fetched {} events for stream: {}", result.size(), streamId);
+        return result;
     }
 
     @Override
     @Transactional
     public void acknowledgeEvents(String streamId, List<String> jtis) {
-        if (jtis != null && !jtis.isEmpty()) eventRepository.deleteByStreamIdAndJtiIn(streamId, jtis);
+        if (jtis == null || jtis.isEmpty()) {
+            return;
+        }
+
+        log.debug("Acknowledging events: stream={}, jtis={}", streamId, jtis);
+        streamEventRepository.acknowledgeEvents(jtis, Instant.now());
+        log.info("Acknowledged {} events for stream: {}", jtis.size(), streamId);
+
     }
 
     @Override
     public boolean hasMoreEvents(String streamId) {
-        return eventRepository.countByStreamId(streamId) > 0;
+        long count = streamEventRepository.countByStreamIdAndAcknowledgedFalse(streamId);
+        return count > 0;
+    }
+
+    @Override
+    public void deleteByAcknowledgedTrueAndAcknowledgedAtBefore(Instant before) {
+        streamEventRepository.deleteByAcknowledgedTrueAndAcknowledgedAtBefore(before);
+    }
+
+    @Override
+    public long getEventCount() {
+        return streamEventRepository.count();
     }
 
     private StreamConfiguration toModel(StreamEntity entity) {

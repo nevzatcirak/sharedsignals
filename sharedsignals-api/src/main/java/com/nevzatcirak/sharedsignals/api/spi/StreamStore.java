@@ -1,6 +1,9 @@
 package com.nevzatcirak.sharedsignals.api.spi;
 
+import com.nevzatcirak.sharedsignals.api.model.RemoveSubjectCommand;
 import com.nevzatcirak.sharedsignals.api.model.StreamConfiguration;
+
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,6 +60,20 @@ public interface StreamStore {
      */
     boolean isSubjectRegistered(String streamId, Map<String, Object> subject);
 
+    /**
+     * Checks if a subject is in grace period after removal.
+     * <p>
+     * SSF Spec Section 9.3: Transmitters MAY continue sending events
+     * for some time after subject removal.
+     *
+     * @param streamId the stream identifier
+     * @param subject the subject to check
+     * @return true if subject is in grace period, false otherwise
+     */
+    boolean isSubjectInGracePeriod(String streamId, Map<String, Object> subject);
+
+    void deleteByGracePeriodExpiresAtBefore(Instant expiryTime);
+
     // ========== Event Buffering (Poll) ==========
 
     /**
@@ -92,4 +109,13 @@ public interface StreamStore {
      * @return true if more events are available, false otherwise
      */
     boolean hasMoreEvents(String streamId);
+
+    /**
+     * Deletes old acknowledged events (cleanup).
+     *
+     * @param before delete events acknowledged before this time
+     */
+    void deleteByAcknowledgedTrueAndAcknowledgedAtBefore(Instant before);
+
+    long getEventCount();
 }

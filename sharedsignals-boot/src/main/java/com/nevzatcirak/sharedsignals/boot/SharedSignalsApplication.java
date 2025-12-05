@@ -4,6 +4,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Main application entry point.
@@ -12,6 +13,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @ComponentScan(basePackages = "com.nevzatcirak.sharedsignals")
 @EnableJpaRepositories(basePackages = "com.nevzatcirak.sharedsignals.persistence.repository")
 @EntityScan(basePackages = "com.nevzatcirak.sharedsignals.persistence.entity")
+@EnableScheduling
 public class SharedSignalsApplication {
     public static void main(String[] args) {
         SpringApplication.run(SharedSignalsApplication.class, args);

@@ -37,7 +37,6 @@ public class DefaultJwkSetService implements JwkSetService {
         return this.rsaKey.toPublicJWK().toJSONObject();
     }
 
-    // Internal method for TokenSigningService to get the full key
     public RSAKey getRsaKey() {
         return this.rsaKey;
     }
