@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Constants for OpenID Shared Signals Framework (SSF), CAEP, and RISC specifications.
  * Defines standard URNs for Event Types, Subject Formats, Delivery Methods, and Protocols.
- * Moved to API module to be accessible by all layers.
+ * Updated to fully support RISC 1.0 and CAEP 1.0.
  */
 public final class SharedSignalConstants {
     private SharedSignalConstants() {}
@@ -27,37 +27,45 @@ public final class SharedSignalConstants {
     public static final String DEFAULT_SUBJECT_MODE = "NONE";
 
     public static final List<String> SUPPORTED_EVENTS = List.of(
+            // CAEP
             SharedSignalConstants.CAEP_SESSION_REVOKED,
             SharedSignalConstants.CAEP_CREDENTIAL_CHANGE,
             SharedSignalConstants.CAEP_TOKEN_CLAIMS_CHANGE,
             SharedSignalConstants.CAEP_ASSURANCE_LEVEL_CHANGE,
             SharedSignalConstants.CAEP_DEVICE_COMPLIANCE_CHANGE,
+            // RISC
             SharedSignalConstants.RISC_ACCOUNT_DISABLED,
             SharedSignalConstants.RISC_ACCOUNT_ENABLED,
             SharedSignalConstants.RISC_ACCOUNT_PURGED,
             SharedSignalConstants.RISC_CREDENTIAL_COMPROMISE,
+            SharedSignalConstants.RISC_ACCOUNT_CREDENTIAL_CHANGE_REQUIRED,
             SharedSignalConstants.RISC_IDENTIFIER_CHANGED,
             SharedSignalConstants.RISC_OPT_OUT,
+            SharedSignalConstants.RISC_RECOVERY_ACTIVATED,
+            SharedSignalConstants.RISC_RECOVERY_INFORMATION_CHANGED,
             SharedSignalConstants.RISC_VERIFICATION
     );
 
-    // --- CAEP Events ---
+    // --- CAEP Events (Continuous Access Evaluation Profile) ---
     public static final String CAEP_SESSION_REVOKED = "https://schemas.openid.net/secevent/caep/event-type/session-revoked";
     public static final String CAEP_CREDENTIAL_CHANGE = "https://schemas.openid.net/secevent/caep/event-type/credential-change";
     public static final String CAEP_TOKEN_CLAIMS_CHANGE = "https://schemas.openid.net/secevent/caep/event-type/token-claims-change";
     public static final String CAEP_ASSURANCE_LEVEL_CHANGE = "https://schemas.openid.net/secevent/caep/event-type/assurance-level-change";
     public static final String CAEP_DEVICE_COMPLIANCE_CHANGE = "https://schemas.openid.net/secevent/caep/event-type/device-compliance-change";
 
-    // --- RISC Events ---
+    // --- RISC Events (Risk Incident Sharing and Coordination) ---
     public static final String RISC_ACCOUNT_DISABLED = "https://schemas.openid.net/secevent/risc/event-type/account-disabled";
     public static final String RISC_ACCOUNT_ENABLED = "https://schemas.openid.net/secevent/risc/event-type/account-enabled";
     public static final String RISC_ACCOUNT_PURGED = "https://schemas.openid.net/secevent/risc/event-type/account-purged";
     public static final String RISC_CREDENTIAL_COMPROMISE = "https://schemas.openid.net/secevent/risc/event-type/credential-compromise";
+    public static final String RISC_ACCOUNT_CREDENTIAL_CHANGE_REQUIRED = "https://schemas.openid.net/secevent/risc/event-type/account-credential-change-required";
     public static final String RISC_IDENTIFIER_CHANGED = "https://schemas.openid.net/secevent/risc/event-type/identifier-changed";
     public static final String RISC_OPT_OUT = "https://schemas.openid.net/secevent/risc/event-type/opt-out";
+    public static final String RISC_RECOVERY_ACTIVATED = "https://schemas.openid.net/secevent/risc/event-type/recovery-activated";
+    public static final String RISC_RECOVERY_INFORMATION_CHANGED = "https://schemas.openid.net/secevent/risc/event-type/recovery-information-changed";
     public static final String RISC_VERIFICATION = "https://schemas.openid.net/secevent/risc/event-type/verification";
 
-    // SSF Event Types
+    // --- SSF Events (Shared Signals Framework) ---
     public static final String SSF_VERIFICATION = "https://schemas.openid.net/secevent/ssf/event-type/verification";
     public static final String SSF_STREAM_UPDATED = "https://schemas.openid.net/secevent/ssf/event-type/stream-updated";
 
