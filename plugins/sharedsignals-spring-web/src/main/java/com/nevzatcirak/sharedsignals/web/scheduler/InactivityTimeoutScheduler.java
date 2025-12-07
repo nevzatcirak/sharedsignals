@@ -18,13 +18,13 @@ import org.springframework.stereotype.Component;
  * triggers the Stream Updated event when streams are paused due to inactivity.
  * <p>
  * Configuration:
- * - Enable/disable: sharedsignals.features.inactivity-timeout-check-enabled
+ * - Enable/disable: sharedsignals.features.stream-monitoring
  * - Interval: sharedsignals.scheduler.inactivity-check-interval (default: 5 minutes)
  * - Initial delay: sharedsignals.scheduler.inactivity-check-initial-delay (default: 1 minute)
  */
 @Component
 @ConditionalOnProperty(
-        name = "sharedsignals.features.inactivity-timeout-check-enabled",
+        name = "sharedsignals.features.stream-monitoring",
         havingValue = "true",
         matchIfMissing = true
 )

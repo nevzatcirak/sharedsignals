@@ -21,6 +21,26 @@ public final class SharedSignalConstants {
     public static final String STATUS_DISABLED = "disabled";
     public static final String DEFAULT_SUBJECT_MODE = "NONE";
 
+    // --- Subject Formats ---
+    public static final String FORMAT_EMAIL = "email";
+    public static final String FORMAT_ISSUER_SUBJECT = "iss_sub";
+    public static final String FORMAT_OPAQUE = "opaque";
+    public static final String FORMAT_PHONE = "phone_number";
+    public static final String FORMAT_ACCOUNT = "account";
+    public static final String FORMAT_DID = "did";
+    public static final String FORMAT_JWT_ID = "jwt_id";
+    public static final String FORMAT_SAML_ASSERTION_ID = "saml_assertion_id";
+    public static final String FORMAT_URI = "uri";
+    public static final String FORMAT_IP = "ip";
+    public static final String FORMAT_COMPLEX = "complex";
+    public static final String FORMAT_ALIASES = "aliases";
+
+    public static final List<String> SUPPORTED_SUBJECT_FORMATS = List.of(
+        FORMAT_EMAIL, FORMAT_ISSUER_SUBJECT, FORMAT_OPAQUE, FORMAT_PHONE,
+        FORMAT_ACCOUNT, FORMAT_DID, FORMAT_JWT_ID, FORMAT_SAML_ASSERTION_ID,
+        FORMAT_URI, FORMAT_IP, FORMAT_COMPLEX, FORMAT_ALIASES
+    );
+
     // --- CAEP Events ---
     public static final String CAEP_SESSION_REVOKED = "https://schemas.openid.net/secevent/caep/event-type/session-revoked";
     public static final String CAEP_SESSION_ESTABLISHED = "https://schemas.openid.net/secevent/caep/event-type/session-established";
@@ -45,6 +65,7 @@ public final class SharedSignalConstants {
     public static final String RISC_OPT_OUT_INITIATED = "https://schemas.openid.net/secevent/risc/event-type/opt-out-initiated";
     public static final String RISC_OPT_OUT_CANCELLED = "https://schemas.openid.net/secevent/risc/event-type/opt-out-cancelled";
     public static final String RISC_OPT_OUT_EFFECTIVE = "https://schemas.openid.net/secevent/risc/event-type/opt-out-effective";
+
     public static final String RISC_RECOVERY_ACTIVATED = "https://schemas.openid.net/secevent/risc/event-type/recovery-activated";
     public static final String RISC_RECOVERY_INFORMATION_CHANGED = "https://schemas.openid.net/secevent/risc/event-type/recovery-information-changed";
     public static final String RISC_VERIFICATION = "https://schemas.openid.net/secevent/risc/event-type/verification";
@@ -53,21 +74,6 @@ public final class SharedSignalConstants {
     public static final String SSF_VERIFICATION = "https://schemas.openid.net/secevent/ssf/event-type/verification";
     public static final String SSF_STREAM_UPDATED = "https://schemas.openid.net/secevent/ssf/event-type/stream-updated";
 
-    // --- Subject Formats ---
-    public static final String FORMAT_EMAIL = "email";
-    public static final String FORMAT_ISSUER_SUBJECT = "iss_sub";
-    public static final String FORMAT_OPAQUE = "opaque";
-    public static final String FORMAT_PHONE = "phone_number";
-    public static final String FORMAT_ACCOUNT = "account";
-    public static final String FORMAT_DID = "did";
-    public static final String FORMAT_JWT_ID = "jwt_id";
-    public static final String FORMAT_SAML_ASSERTION_ID = "saml_assertion_id";
-    public static final String FORMAT_URI = "uri";
-    public static final String FORMAT_IP = "ip";
-    public static final String FORMAT_COMPLEX = "complex";
-    public static final String FORMAT_ALIASES = "aliases";
-
-    // FULL LIST OF SUPPORTED EVENTS
     public static final List<String> SUPPORTED_EVENTS = List.of(
         CAEP_SESSION_REVOKED,
         CAEP_SESSION_ESTABLISHED,

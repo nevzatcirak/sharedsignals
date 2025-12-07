@@ -3,10 +3,18 @@ package com.nevzatcirak.sharedsignals.web.controller;
 import com.nevzatcirak.sharedsignals.api.facade.AuthFacade;
 import com.nevzatcirak.sharedsignals.api.model.StreamConfiguration;
 import com.nevzatcirak.sharedsignals.api.service.StreamConfigurationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +28,8 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/ssf/stream")
+@Tag(name = "Stream Configuration", description = "Management of Event Streams (Create, Read, Update, Delete). SSF Spec Section 8.1.1.")
+@SecurityRequirement(name = "bearer-key")
 public class StreamConfigurationController {
 
     private static final Logger log = LoggerFactory.getLogger(StreamConfigurationController.class);
@@ -47,6 +57,15 @@ public class StreamConfigurationController {
      * @return 201 Created with the created stream configuration
      */
     @PostMapping
+    @Operation(
+        summary = "Create a Stream",
+        description = "Creates a new stream configuration. Returns the created configuration including a unique 'stream_id'."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Stream created successfully.", content = @Content(schema = @Schema(implementation = StreamConfiguration.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid configuration.", content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized.", content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<StreamConfiguration> createStream(@RequestBody StreamConfiguration body) {
         if (body.getStream_id() != null) {
             log.warn("Client attempted to supply stream_id in create request. This will be ignored.");
@@ -80,6 +99,11 @@ public class StreamConfigurationController {
      * @return 200 OK with stream configuration or list of configurations
      */
     @GetMapping
+    @Operation(summary = "Get Stream Configuration", description = "Retrieves the configuration of a specific stream or all streams owned by the client.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Stream configuration(s) returned."),
+        @ApiResponse(responseCode = "404", description = "Stream not found.", content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<?> getStream(@RequestParam(name = "stream_id", required = false) String streamId) {
         String owner = authFacade.getClientId();
 
@@ -104,6 +128,11 @@ public class StreamConfigurationController {
      * @return 200 OK with the updated stream configuration
      */
     @PutMapping
+    @Operation(summary = "Replace Stream", description = "Completely replaces the configuration of an existing stream.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Stream updated successfully.", content = @Content(schema = @Schema(implementation = StreamConfiguration.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request (missing stream_id or required fields).", content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<StreamConfiguration> replaceStream(@RequestBody StreamConfiguration body) {
         if (body.getStream_id() == null || body.getStream_id().isBlank()) {
             return ResponseEntity.badRequest().build();
@@ -128,6 +157,11 @@ public class StreamConfigurationController {
      * @return 200 OK with the updated stream configuration
      */
     @PatchMapping
+    @Operation(summary = "Update Stream", description = "Updates specific properties of a stream configuration.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Stream updated successfully.", content = @Content(schema = @Schema(implementation = StreamConfiguration.class))),
+        @ApiResponse(responseCode = "404", description = "Stream not found.", content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<StreamConfiguration> updateStream(@RequestBody StreamConfiguration body) {
         if (body.getStream_id() == null || body.getStream_id().isEmpty()) {
             return ResponseEntity.badRequest().build();
@@ -151,6 +185,11 @@ public class StreamConfigurationController {
      * @return 204 No Content
      */
     @DeleteMapping
+    @Operation(summary = "Delete Stream", description = "Deletes an event stream.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Stream deleted successfully."),
+        @ApiResponse(responseCode = "404", description = "Stream not found.", content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<Void> deleteStream(@RequestParam("stream_id") String streamId) {
         streamService.deleteStream(streamId, authFacade.getClientId());
         return ResponseEntity.noContent()

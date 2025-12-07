@@ -17,7 +17,7 @@ import org.springframework.security.web.SecurityFilterChain;
  * Security Configuration for Shared Signals Framework.
  * <p>
  * Configures OAuth2 Resource Server with JWT authentication.
- * * IMPORTANT: This configuration is DISABLED in the 'test' profile to allow
+ * IMPORTANT: This configuration is DISABLED in the 'test' profile to allow
  * integration tests to use a bypass configuration (TestSecurityConfig).
  */
 @Configuration
@@ -34,11 +34,18 @@ public class SsfSecurityAutoConfiguration {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints
+                // Allow access to Swagger UI and API Docs
+                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**").permitAll()
+
+                // Allow access to Well-Known endpoints (Discovery)
+                // Use strict matching and wildcard matching to cover all cases
                 .requestMatchers("/.well-known/**").permitAll()
+
+                // Allow access to Webhooks (if any)
                 .requestMatchers("/webhook/**").permitAll()
-                // Secured endpoints
-                .requestMatchers("/ssf/**").authenticated()
+
+                // Secure everything else (SSF API, Ingestion API)
+                .requestMatchers("/ssf/**", "/api/v1/ingest/**").authenticated()
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

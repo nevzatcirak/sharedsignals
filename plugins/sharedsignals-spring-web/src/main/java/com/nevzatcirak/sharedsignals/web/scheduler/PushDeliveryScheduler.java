@@ -26,7 +26,7 @@ import java.util.List;
  * to prevent duplicate delivery attempts.
  */
 @Component
-@ConditionalOnProperty(name = "sharedsignals.features.push-delivery-enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "sharedsignals.features.push-delivery", havingValue = "true", matchIfMissing = true)
 public class PushDeliveryScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(PushDeliveryScheduler.class);

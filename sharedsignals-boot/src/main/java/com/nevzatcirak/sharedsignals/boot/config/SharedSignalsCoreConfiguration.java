@@ -19,7 +19,7 @@ public class SharedSignalsCoreConfiguration {
             StreamStore streamStore,
             @Value("${sharedsignals.issuer}") String issuerUrl,
             @Value("${sharedsignals.defaults.inactivity-timeout:2592000}") int defaultInactivityTimeout,
-            @Value("${sharedsignals.features.allow-multiple-streams-per-receiver:false}") boolean allowMultipleStreams,
+            @Value("${sharedsignals.features.multi-stream-per-receiver:false}") boolean allowMultipleStreams,
             @Value("${sharedsignals.defaults.max-description-length:255}") int maxDescriptionLength,
             InactivityTimeoutService inactivityService)
     {

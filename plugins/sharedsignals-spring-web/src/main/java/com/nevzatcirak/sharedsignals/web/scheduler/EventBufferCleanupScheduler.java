@@ -30,7 +30,7 @@ public class EventBufferCleanupScheduler {
 
     public EventBufferCleanupScheduler(
             StreamStore streamStore,
-            @Value("${sharedsignals.poll.acknowledged-event-retention-days:7}") int retentionDays) {
+            @Value("${sharedsignals.retention.acknowledged-event-history-days:7}") int retentionDays) {
         this.streamStore = streamStore;
         this.retentionDays = retentionDays;
     }

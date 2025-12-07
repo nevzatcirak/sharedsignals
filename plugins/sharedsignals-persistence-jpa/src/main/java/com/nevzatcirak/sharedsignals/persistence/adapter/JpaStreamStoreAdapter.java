@@ -7,7 +7,6 @@ import com.nevzatcirak.sharedsignals.api.exception.*;
 import com.nevzatcirak.sharedsignals.api.model.StreamConfiguration;
 import com.nevzatcirak.sharedsignals.api.model.StreamDelivery;
 import com.nevzatcirak.sharedsignals.api.spi.StreamStore;
-import com.nevzatcirak.sharedsignals.core.service.impl.DefaultEventRetrievalService;
 import com.nevzatcirak.sharedsignals.persistence.entity.*;
 import com.nevzatcirak.sharedsignals.persistence.repository.*;
 import com.nevzatcirak.sharedsignals.persistence.util.SubjectHashUtil;
@@ -24,12 +23,23 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * JPA-based implementation of StreamStore SPI.
+ * JPA implementation of the {@link StreamStore} SPI.
+ * <p>
+ * This adapter bridges the Domain Layer's storage requirements with the JPA Persistence Layer.
+ * It handles:
+ * <ul>
+ * <li>Entity-to-Model conversion.</li>
+ * <li>Complex queries (e.g., finding streams by subject hash).</li>
+ * <li>Transaction management.</li>
+ * <li>JSON serialization of complex subjects.</li>
+ * </ul>
+ * </p>
  */
 @Component
 public class JpaStreamStoreAdapter implements StreamStore {
 
     private static final Logger log = LoggerFactory.getLogger(JpaStreamStoreAdapter.class);
+
     private final StreamRepository streamRepository;
     private final SubjectRepository subjectRepository;
     private final RemovedSubjectRepository removedSubjectRepository;
@@ -38,7 +48,6 @@ public class JpaStreamStoreAdapter implements StreamStore {
     private final ObjectMapper objectMapper;
     private final int subjectRemovalGracePeriodSeconds;
 
-
     public JpaStreamStoreAdapter(
             StreamRepository streamRepository,
             SubjectRepository subjectRepository,
@@ -46,11 +55,11 @@ public class JpaStreamStoreAdapter implements StreamStore {
             StreamEventRepository streamEventRepository,
             SubjectHashUtil subjectHashUtil,
             ObjectMapper objectMapper,
-            @Value("${sharedsignals.security.subject-removal-grace-period:604800}") int gracePeriodSeconds) {
+            @Value("${sharedsignals.retention.subject-grace-period-seconds:604800}") int gracePeriodSeconds) {
         this.streamRepository = streamRepository;
         this.subjectRepository = subjectRepository;
         this.removedSubjectRepository = removedSubjectRepository;
-        this.streamEventRepository = streamEventRepository;  // ← Renamed
+        this.streamEventRepository = streamEventRepository;
         this.subjectHashUtil = subjectHashUtil;
         this.objectMapper = objectMapper;
         this.subjectRemovalGracePeriodSeconds = gracePeriodSeconds;
@@ -72,13 +81,12 @@ public class JpaStreamStoreAdapter implements StreamStore {
 
     private void mergeToEntity(StreamConfiguration model, StreamEntity entity) {
         entity.setIssuer(model.getIss());
-
         if (model.getAud() != null) entity.setAudience(new HashSet<>(model.getAud()));
         else entity.getAudience().clear();
 
         entity.setDescription(model.getDescription());
         entity.setMinVerificationInterval(model.getMin_verification_interval());
-        entity.setInactivityTimeout(model.getInactivity_timeout()); // New Field
+        entity.setInactivityTimeout(model.getInactivity_timeout());
 
         if (model.getStatus() != null) entity.setStatus(model.getStatus());
         entity.setStatusReason(model.getReason());
@@ -151,9 +159,6 @@ public class JpaStreamStoreAdapter implements StreamStore {
     @Override
     @Transactional
     public void removeSubject(String streamId, Map<String, Object> subject) {
-        String hash = subjectHashUtil.computeHash(subject);
-        subjectRepository.findByStreamStreamIdAndSubjectHash(streamId, hash).ifPresent(subjectRepository::delete);
-
         String subjectHash = subjectHashUtil.computeHash(subject);
 
         SubjectEntity subjectEntity = subjectRepository
@@ -171,12 +176,10 @@ public class JpaStreamStoreAdapter implements StreamStore {
         );
 
         removedSubjectRepository.save(removedSubject);
-        // Remove from active subjects
         subjectRepository.delete(subjectEntity);
 
         log.info("Subject removed from stream {} with grace period until {}",
                 streamId, removedSubject.getGracePeriodExpiresAt());
-
     }
 
     @Override
@@ -189,11 +192,7 @@ public class JpaStreamStoreAdapter implements StreamStore {
 
     @Override
     public void deleteByGracePeriodExpiresAtBefore(Instant expiryTime) {
-        int expiredSize = removedSubjectRepository.findExpiredGracePeriods(expiryTime).size();
-        if(expiredSize > 0){
-            removedSubjectRepository.deleteByGracePeriodExpiresAtBefore(expiryTime);
-            log.info("Cleaned up {} expired grace period subjects", expiredSize);
-        }
+        removedSubjectRepository.deleteByGracePeriodExpiresAtBefore(expiryTime);
     }
 
     @Override
@@ -204,7 +203,6 @@ public class JpaStreamStoreAdapter implements StreamStore {
     @Override
     public void saveEvent(String streamId, String jti, String setToken) {
         log.debug("Saving event to buffer: stream={}, jti={}", streamId, jti);
-
         StreamEventEntity event = new StreamEventEntity();
         event.setStreamId(streamId);
         event.setJti(jti);
@@ -218,7 +216,6 @@ public class JpaStreamStoreAdapter implements StreamStore {
     @Override
     public Map<String, String> fetchEvents(String streamId, int maxEvents) {
         log.debug("Fetching events from buffer: stream={}, maxEvents={}", streamId, maxEvents);
-
         List<StreamEventEntity> events = streamEventRepository.findUnacknowledgedEvents(
                 streamId,
                 Pageable.ofSize(maxEvents)
@@ -292,7 +289,6 @@ public class JpaStreamStoreAdapter implements StreamStore {
             model.setEvents_delivered(new ArrayList<>(entity.getEventsRequested()));
         }
 
-        //TODO: Supported events should be configurable by the transmitter for real use cases
         model.setEvents_supported(SharedSignalConstants.SUPPORTED_EVENTS);
         return model;
     }

@@ -1,8 +1,9 @@
 package com.nevzatcirak.sharedsignals.core.service.impl;
 
+import com.nevzatcirak.sharedsignals.api.constant.SharedSignalConstants;
 import com.nevzatcirak.sharedsignals.api.model.TransmitterMetadata;
 import com.nevzatcirak.sharedsignals.api.service.TransmitterMetadataService;
-import com.nevzatcirak.sharedsignals.api.constant.SharedSignalConstants;
+
 import java.util.List;
 
 public class DefaultTransmitterMetadataService implements TransmitterMetadataService {
@@ -31,7 +32,8 @@ public class DefaultTransmitterMetadataService implements TransmitterMetadataSer
         md.setRemove_subject_endpoint(this.issuer + "/ssf/subject/remove");
         md.setVerification_endpoint(this.issuer + "/ssf/verification");
 
-        md.setSubject_types_supported(List.of("email", "iss_sub", "opaque", "phone_number"));
+        md.setSubject_types_supported(SharedSignalConstants.SUPPORTED_SUBJECT_FORMATS);
+
         md.setCritical_subject_members(List.of("format"));
         md.setDefault_subjects(SharedSignalConstants.DEFAULT_SUBJECT_MODE);
 

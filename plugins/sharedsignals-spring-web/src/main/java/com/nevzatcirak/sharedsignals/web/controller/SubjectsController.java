@@ -5,7 +5,15 @@ import com.nevzatcirak.sharedsignals.api.service.SubjectManagementService;
 import com.nevzatcirak.sharedsignals.web.mapper.SubjectMapper;
 import com.nevzatcirak.sharedsignals.web.model.SSFAddSubjectRequest;
 import com.nevzatcirak.sharedsignals.web.model.SSFRemoveSubjectRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.CacheControl;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +30,8 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/ssf/subject")
+@Tag(name = "Subject Management", description = "Managing subjects within a stream. SSF Spec Section 8.1.3.")
+@SecurityRequirement(name = "bearer-key")
 public class SubjectsController {
 
     private final SubjectManagementService subjectService;
@@ -49,6 +59,15 @@ public class SubjectsController {
      * @return 200 OK on success (empty body per spec)
      */
     @PostMapping("/add")
+    @Operation(
+        summary = "Add Subject",
+        description = "Adds a subject to the stream. NOTE: Per spec, the transmitter MAY return 200 OK even if the subject is not added (e.g., opted-out) to prevent probing."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Subject added (or silently ignored)."),
+        @ApiResponse(responseCode = "400", description = "Invalid request.", content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "404", description = "Stream not found.", content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<Void> addSubject(@RequestBody SSFAddSubjectRequest request) {
         // Fail-fast validation
         if (request.getStreamId() == null || request.getStreamId().isBlank()) {
@@ -80,6 +99,11 @@ public class SubjectsController {
      * @return 204 No Content on success (per spec)
      */
     @PostMapping("/remove")
+    @Operation(summary = "Remove Subject", description = "Removes a subject from the stream.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Subject removed successfully."),
+        @ApiResponse(responseCode = "404", description = "Stream not found.", content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<Void> removeSubject(@RequestBody SSFRemoveSubjectRequest request) {
         // Fail-fast validation
         if (request.getStreamId() == null || request.getStreamId().isBlank()) {

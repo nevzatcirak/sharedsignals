@@ -5,15 +5,20 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
 import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
 
 /**
  * Global Exception Handler.
- * Fully compliant with SSF Spec error codes including 429.
+ * Fully compliant with SSF Spec error codes and RFC 9457 Problem Details.
  */
 @RestControllerAdvice
 public class GlobalSsfExceptionHandler {
@@ -22,6 +27,54 @@ public class GlobalSsfExceptionHandler {
 
     public GlobalSsfExceptionHandler(@Value("${sharedsignals.issuer}") String issuerUrl) {
         this.issuerUrl = issuerUrl.endsWith("/") ? issuerUrl.substring(0, issuerUrl.length() - 1) : issuerUrl;
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    ProblemDetail handleValidationErrors(MethodArgumentNotValidException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                "Request validation failed. See 'invalid_params' for details."
+        );
+
+        problem.setTitle(SsfErrorCode.INVALID_STREAM_CONFIGURATION.getDescription());
+        problem.setType(URI.create(this.issuerUrl + "/errors/" + SsfErrorCode.INVALID_STREAM_CONFIGURATION.getCode()));
+        problem.setProperty("timestamp", Instant.now());
+        problem.setProperty("code", SsfErrorCode.INVALID_STREAM_CONFIGURATION.getCode());
+
+        Map<String, String> invalidParams = e.getBindingResult().getFieldErrors().stream()
+                .collect(Collectors.toMap(
+                        FieldError::getField,
+                        fieldError -> fieldError.getDefaultMessage() != null ? fieldError.getDefaultMessage() : "Invalid value",
+                        (msg1, msg2) -> msg1 + "; " + msg2
+                ));
+
+        problem.setProperty("invalid_params", invalidParams);
+        return problem;
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ProblemDetail handleJsonError(HttpMessageNotReadableException e) {
+        return buildProblemDetail(HttpStatus.BAD_REQUEST, SsfErrorCode.MALFORMED_REQUEST,
+            "Malformed JSON request or invalid data format.");
+    }
+
+    @ExceptionHandler(CompletionException.class)
+    ProblemDetail handleAsyncException(CompletionException e) {
+        // Unwrap the exception thrown within CompletableFuture
+        Throwable cause = e.getCause();
+
+        if (cause instanceof SsfException ssfEx) {
+            // Recursively handle known domain exceptions
+            if (ssfEx instanceof InvalidConfigurationException || ssfEx instanceof SsfBadRequestException) {
+                return handleBadRequest(ssfEx);
+            }
+            if (ssfEx instanceof StreamNotFoundException) {
+                return handleStreamNotFound((StreamNotFoundException) ssfEx);
+            }
+            return handleGenericSsf(ssfEx);
+        }
+
+        return handleUnknown(new Exception(cause));
     }
 
     @ExceptionHandler(StreamNotFoundException.class)
@@ -44,12 +97,6 @@ public class GlobalSsfExceptionHandler {
         return buildProblemDetail(HttpStatus.BAD_REQUEST, e.getErrorCode(), e.getMessage());
     }
 
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    ProblemDetail handleJsonError(HttpMessageNotReadableException e) {
-        return buildProblemDetail(HttpStatus.BAD_REQUEST, SsfErrorCode.MALFORMED_REQUEST, "Malformed JSON request body.");
-    }
-
-    // --- NEW: 429 Too Many Requests ---
     @ExceptionHandler(RateLimitExceededException.class)
     ProblemDetail handleRateLimit(RateLimitExceededException e) {
         return buildProblemDetail(HttpStatus.TOO_MANY_REQUESTS, e.getErrorCode(), e.getMessage());
@@ -65,6 +112,7 @@ public class GlobalSsfExceptionHandler {
         return buildProblemDetail(HttpStatus.INTERNAL_SERVER_ERROR, e.getErrorCode(), e.getMessage());
     }
 
+    // --- Catch-All Fallback ---
     @ExceptionHandler(Exception.class)
     ProblemDetail handleUnknown(Exception e) {
         e.printStackTrace();

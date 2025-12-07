@@ -1,6 +1,8 @@
 package com.nevzatcirak.sharedsignals.core.validation;
 
+import com.nevzatcirak.sharedsignals.api.constant.SharedSignalConstants;
 import com.nevzatcirak.sharedsignals.api.exception.SsfBadRequestException;
+
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -42,45 +44,45 @@ public class SubjectValidator {
         }
 
         switch (format) {
-            case "email":
+            case SharedSignalConstants.FORMAT_EMAIL:
                 requireField(subject, "email", format);
                 break;
-            case "iss_sub":
+            case SharedSignalConstants.FORMAT_ISSUER_SUBJECT:
                 requireField(subject, "iss", format);
                 requireField(subject, "sub", format);
                 break;
-            case "opaque":
+            case SharedSignalConstants.FORMAT_OPAQUE:
                 requireField(subject, "id", format);
                 break;
-            case "phone_number":
+            case SharedSignalConstants.FORMAT_PHONE:
                 requireField(subject, "phone_number", format);
                 break;
-            case "account":
+            case SharedSignalConstants.FORMAT_ACCOUNT:
                 requireField(subject, "uri", format);
                 break;
-            case "did":
+            case SharedSignalConstants.FORMAT_DID:
                 requireField(subject, "url", format);
                 break;
-            case "uri":
+            case SharedSignalConstants.FORMAT_URI:
                 requireField(subject, "uri", format);
                 break;
-            case "jwt_id":
+            case SharedSignalConstants.FORMAT_JWT_ID:
                 requireField(subject, "iss", format);
                 requireField(subject, "jti", format);
                 break;
-            case "saml_assertion_id":
+            case SharedSignalConstants.FORMAT_SAML_ASSERTION_ID:
                 requireField(subject, "iss", format);
                 requireField(subject, "saml_assertion_id", format);
                 break;
-            case "ip":
+            case SharedSignalConstants.FORMAT_IP:
                 requireField(subject, "ip", format);
                 break;
 
             // --- NESTED TYPES ---
-            case "aliases":
+            case SharedSignalConstants.FORMAT_ALIASES:
                 validateAliases(subject, depth);
                 break;
-            case "complex":
+            case SharedSignalConstants.FORMAT_COMPLEX:
                 validateComplex(subject, depth);
                 break;
             default:
@@ -128,24 +130,18 @@ public class SubjectValidator {
 
     @SuppressWarnings("unchecked")
     private static void validateComplex(Map<String, Object> subject, int depth) {
-        // Rule 1: At least one member + format = size >= 2
         if (subject.size() < 2) {
             throw new SsfBadRequestException("Complex subject must contain at least one member.");
         }
 
         for (Map.Entry<String, Object> entry : subject.entrySet()) {
             if ("format".equals(entry.getKey())) continue;
-
             Object value = entry.getValue();
             if (value instanceof Map) {
                 Map<String, Object> memberSubject = (Map<String, Object>) value;
-
-                // Rule 3: Check for nested complex (Avoid recursion loops and adhere to 'Simple Subject Member' hint)
-                if ("complex".equals(memberSubject.get("format"))) {
+                if (SharedSignalConstants.FORMAT_COMPLEX.equals(memberSubject.get("format"))) {
                     throw new SsfBadRequestException("Nested 'complex' subjects are not allowed within a complex subject.");
                 }
-
-                // Recursive validation
                 validate(memberSubject, depth + 1);
             } else {
                 throw new SsfBadRequestException(

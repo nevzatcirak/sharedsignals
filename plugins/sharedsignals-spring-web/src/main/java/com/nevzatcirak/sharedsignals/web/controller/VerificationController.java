@@ -1,11 +1,18 @@
-
 package com.nevzatcirak.sharedsignals.web.controller;
 
 import com.nevzatcirak.sharedsignals.api.facade.AuthFacade;
 import com.nevzatcirak.sharedsignals.api.service.VerificationService;
 import com.nevzatcirak.sharedsignals.web.mapper.VerificationMapper;
 import com.nevzatcirak.sharedsignals.web.model.SSFVerificationRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.CacheControl;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +28,8 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/ssf/verification")
+@Tag(name = "Verification", description = "Stream Verification. SSF Spec Section 8.1.4.")
+@SecurityRequirement(name = "bearer-key")
 public class VerificationController {
 
     private final VerificationService verificationService;
@@ -50,18 +59,19 @@ public class VerificationController {
      * @return 204 No Content on success (event queued)
      */
     @PostMapping
+    @Operation(
+        summary = "Trigger Verification",
+        description = "Triggers a Verification Event to be sent over the stream. Returns 204 (Accepted) immediately; the event is delivered asynchronously."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Verification event queued."),
+        @ApiResponse(responseCode = "429", description = "Too many verification requests (Rate Limit).", content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "404", description = "Stream not found.", content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<Void> triggerVerification(@RequestBody SSFVerificationRequest request) {
-        // Fail-fast validation
-        if (request.getStreamId() == null || request.getStreamId().isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
+        if (request.getStreamId() == null || request.getStreamId().isBlank()) return ResponseEntity.badRequest().build();
 
-        String clientId = authFacade.getClientId();
-        verificationService.triggerVerification(verificationMapper.toCommand(request), clientId);
-
-        // SSF Spec 8.1.4.2: Return 204 No Content (event queued)
-        return ResponseEntity.noContent()
-                .cacheControl(CacheControl.noStore())
-                .build();
+        verificationService.triggerVerification(verificationMapper.toCommand(request), authFacade.getClientId());
+        return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 }

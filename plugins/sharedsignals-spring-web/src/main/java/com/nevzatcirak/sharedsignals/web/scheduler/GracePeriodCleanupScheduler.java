@@ -19,14 +19,13 @@ import java.time.Instant;
  */
 @Component
 @ConditionalOnProperty(
-        name = "sharedsignals.security.grace-period-cleanup-enabled",
+        value = "sharedsignals.features.maintenance.subjects",
         havingValue = "true",
         matchIfMissing = true
 )
 public class GracePeriodCleanupScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(GracePeriodCleanupScheduler.class);
-
     private final StreamStore streamStore;
 
     public GracePeriodCleanupScheduler(StreamStore streamStore) {
