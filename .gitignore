@@ -26,3 +26,7 @@ replay_pid*
 .idea
 .qodo
 **/*/target/
+
+project_code_context.sh
+project_code_context.txt
+gemini.sh

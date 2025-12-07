@@ -16,6 +16,7 @@
         <module>plugins/sharedsignals-persistence-jpa</module>
         <module>plugins/sharedsignals-spring-web</module>
         <module>plugins/sharedsignals-security-oauth2</module>
+        <module>plugins/sharedsignals-adapter-caffeine</module>
     </modules>
 
     <properties>

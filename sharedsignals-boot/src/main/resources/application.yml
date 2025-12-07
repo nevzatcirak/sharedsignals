@@ -94,6 +94,11 @@ sharedsignals:
   defaults:
     inactivity-timeout: 2592000  # 30 days
     max-description-length: 255
+  ratelimit:
+    enabled: true
+    capacity: 1000
+    refill-tokens: 500
+    refill-duration-seconds: 60
 
 logging:
   level:

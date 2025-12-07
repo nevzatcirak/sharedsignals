@@ -53,17 +53,6 @@ public class TestSecurityConfig {
         };
     }
 
-    @Bean
-    @Primary
-    public RateLimitInterceptor noOpRateLimitInterceptor() {
-        return new RateLimitInterceptor() {
-            @Override
-            public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-                return true;
-            }
-        };
-    }
-
     /**
      * MOCK LockProvider for Tests.
      * Always acquires the lock successfully.
