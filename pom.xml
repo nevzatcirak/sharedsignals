@@ -11,10 +11,11 @@
     <modules>
         <module>sharedsignals-api</module>
         <module>sharedsignals-core</module>
+        <module>sharedsignals-boot</module>
+        <module>plugins/sharedsignals-adapter-rest</module>
         <module>plugins/sharedsignals-persistence-jpa</module>
         <module>plugins/sharedsignals-spring-web</module>
         <module>plugins/sharedsignals-security-oauth2</module>
-        <module>sharedsignals-boot</module>
     </modules>
 
     <properties>

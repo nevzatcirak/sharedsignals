@@ -1,20 +1,15 @@
 package com.nevzatcirak.sharedsignals.boot.config;
 
 import com.nevzatcirak.sharedsignals.api.service.*;
-import com.nevzatcirak.sharedsignals.api.spi.PrivacyPolicyValidator;
-import com.nevzatcirak.sharedsignals.api.spi.PushQueueStore;
+import com.nevzatcirak.sharedsignals.api.spi.*;
+import com.nevzatcirak.sharedsignals.core.mapper.SecurityEventMapper;
 import com.nevzatcirak.sharedsignals.core.privacy.DefaultPrivacyPolicyValidator;
 import com.nevzatcirak.sharedsignals.core.service.impl.*;
-import com.nevzatcirak.sharedsignals.api.spi.EventSender;
-import com.nevzatcirak.sharedsignals.api.spi.StreamStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Wiring configuration that registers Core POJOs as Spring Beans.
- */
 @Configuration
 public class SharedSignalsCoreConfiguration {
 
@@ -26,14 +21,11 @@ public class SharedSignalsCoreConfiguration {
             @Value("${sharedsignals.defaults.inactivity-timeout:2592000}") int defaultInactivityTimeout,
             @Value("${sharedsignals.features.allow-multiple-streams-per-receiver:false}") boolean allowMultipleStreams,
             @Value("${sharedsignals.defaults.max-description-length:255}") int maxDescriptionLength,
-            InactivityTimeoutService inactivityService) {
+            InactivityTimeoutService inactivityService)
+    {
         return new DefaultStreamConfigurationService(
-                streamStore,
-                issuerUrl,
-                defaultInactivityTimeout,
-                allowMultipleStreams,
-                maxDescriptionLength,
-                inactivityService
+                streamStore, issuerUrl, defaultInactivityTimeout,
+                allowMultipleStreams, maxDescriptionLength, inactivityService
         );
     }
 
@@ -43,8 +35,7 @@ public class SharedSignalsCoreConfiguration {
     }
 
     @Bean
-    public TransmitterMetadataService transmitterMetadataService(
-            @Value("${sharedsignals.issuer}") String issuer) {
+    public TransmitterMetadataService transmitterMetadataService(@Value("${sharedsignals.issuer}") String issuer) {
         return new DefaultTransmitterMetadataService(issuer);
     }
 
@@ -66,24 +57,18 @@ public class SharedSignalsCoreConfiguration {
 
     @Bean
     public EventPublisherService eventPublisherService(
-            StreamStore streamStore,
-            TokenSigningService signingService,
-            EventSender eventSender,
-            PrivacyPolicyValidator privacyValidator) {
+            StreamStore streamStore, TokenSigningService signingService,
+            EventSender eventSender, PrivacyPolicyValidator privacyValidator) {
         return new DefaultEventPublisherService(streamStore, signingService, eventSender, privacyValidator);
     }
 
     @Bean
-    public StreamStatusService streamStatusService(
-            StreamStore streamStore,
-            EventPublisherService eventPublisher) {
+    public StreamStatusService streamStatusService(StreamStore streamStore, EventPublisherService eventPublisher) {
         return new DefaultStreamStatusService(streamStore, eventPublisher);
     }
 
     @Bean
-    public VerificationService verificationService(
-            EventPublisherService eventPublisher,
-            StreamStore streamStore) {
+    public VerificationService verificationService(EventPublisherService eventPublisher, StreamStore streamStore) {
         return new DefaultVerificationService(eventPublisher, streamStore);
     }
 
@@ -93,9 +78,7 @@ public class SharedSignalsCoreConfiguration {
     }
 
     @Bean
-    public InactivityTimeoutService inactivityTimeoutService(
-            StreamStore streamStore, StreamStatusService streamStatusService
-            ) {
+    public InactivityTimeoutService inactivityTimeoutService(StreamStore streamStore, StreamStatusService streamStatusService) {
         return new DefaultInactivityTimeoutService(streamStore, streamStatusService);
     }
 
@@ -108,5 +91,15 @@ public class SharedSignalsCoreConfiguration {
     @Bean
     public PushQueueService pushQueueService(PushQueueStore pushQueueStore) {
         return new DefaultPushQueueService(pushQueueStore);
+    }
+
+    @Bean
+    public SecurityEventMapper securityEventMapper() {
+        return new SecurityEventMapper();
+    }
+
+    @Bean
+    public EventIngestionService eventIngestionService(EventPublisherService eventPublisherService, SecurityEventMapper mapper) {
+        return new DefaultEventIngestionService(eventPublisherService, mapper);
     }
 }
