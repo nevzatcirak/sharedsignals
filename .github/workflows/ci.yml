@@ -35,7 +35,7 @@ jobs:
           mvn clean install -DskipTests
           
           mvn com.google.cloud.tools:jib-maven-plugin:3.5.0:build \
-            --projects assistant-boot \
+            --projects sharedsignals-boot \
             -Djib.to.image=nevzatcirak/sharedsignals:latest \
             -Djib.from.image=eclipse-temurin:21-jre \
             -Djib.platforms=linux/amd64,linux/arm64
