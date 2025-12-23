@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+//import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -27,7 +27,7 @@ import java.util.Optional;
 @TestConfiguration
 public class TestSecurityConfig {
 
-    @Bean
+    /*@Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain testFilterChain(HttpSecurity http) throws Exception {
         http
@@ -35,7 +35,7 @@ public class TestSecurityConfig {
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
             .addFilterBefore(testAuthFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
-    }
+    }*/
 
     @Bean
     public Filter testAuthFilter() {
