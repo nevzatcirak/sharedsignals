@@ -117,5 +117,7 @@ public interface StreamStore {
      */
     void deleteByAcknowledgedTrueAndAcknowledgedAtBefore(Instant before);
 
+    long countUnacknowledgedEvents(String streamId);
+
     long getEventCount();
 }

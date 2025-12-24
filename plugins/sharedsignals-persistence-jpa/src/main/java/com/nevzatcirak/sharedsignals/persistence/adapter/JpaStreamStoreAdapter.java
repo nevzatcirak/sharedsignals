@@ -255,6 +255,11 @@ public class JpaStreamStoreAdapter implements StreamStore {
     }
 
     @Override
+    public long countUnacknowledgedEvents(String streamId) {
+        return streamEventRepository.countByStreamIdAndAcknowledgedFalse(streamId);
+    }
+
+    @Override
     public long getEventCount() {
         return streamEventRepository.count();
     }
@@ -286,7 +291,7 @@ public class JpaStreamStoreAdapter implements StreamStore {
         if (entity.getEventsDelivered() != null && !entity.getEventsDelivered().isEmpty()) {
             model.setEvents_delivered(new ArrayList<>(entity.getEventsDelivered()));
         } else if (entity.getEventsRequested() != null) {
-            model.setEvents_delivered(new ArrayList<>(entity.getEventsRequested()));
+            model.setEvents_requested(new ArrayList<>(entity.getEventsRequested()));
         }
 
         model.setEvents_supported(SharedSignalConstants.SUPPORTED_EVENTS);

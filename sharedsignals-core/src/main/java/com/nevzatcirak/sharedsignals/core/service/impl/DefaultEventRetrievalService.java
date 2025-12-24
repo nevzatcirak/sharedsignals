@@ -69,12 +69,11 @@ public class DefaultEventRetrievalService implements EventRetrievalService {
 
                 // Return if events found OR immediate return requested OR timeout
                 if (!events.isEmpty() || command.isReturnImmediately() ||
-                   (System.currentTimeMillis() - startTime > LONG_POLL_TIMEOUT_MS)) {
+                        (System.currentTimeMillis() - startTime > LONG_POLL_TIMEOUT_MS)) {
                     break;
                 }
 
                 // Short sleep is acceptable here because we are in a dedicated Async Thread,
-                // NOT the Web Server (Tomcat) thread.
                 TimeUnit.MILLISECONDS.sleep(POLL_INTERVAL_MS);
             }
         } catch (InterruptedException e) {
@@ -82,11 +81,12 @@ public class DefaultEventRetrievalService implements EventRetrievalService {
         }
 
         // RFC 8936 Section 2.3: Check if more events available
-        boolean moreAvailable = streamStore.hasMoreEvents(streamId);
+        long totalUnackedCount = streamStore.countUnacknowledgedEvents(streamId);
+        long remainingEvents = totalUnackedCount - events.size();
+        boolean moreAvailable = remainingEvents > 0;
 
         log.info("Poll result for stream {}: {} events returned, moreAvailable: {}",
                 streamId, events.size(), moreAvailable);
-
         return new PollResult(events, moreAvailable);
     }
 
@@ -96,7 +96,7 @@ public class DefaultEventRetrievalService implements EventRetrievalService {
      * RFC 8936 Section 2.2.2: Event Receiver reports errors for specific SETs.
      *
      * @param streamId the stream identifier
-     * @param errors map of jti -> error details
+     * @param errors   map of jti -> error details
      */
     private void handleSetErrors(String streamId, Map<String, PollCommand.PollError> errors) {
         for (Map.Entry<String, PollCommand.PollError> entry : errors.entrySet()) {
