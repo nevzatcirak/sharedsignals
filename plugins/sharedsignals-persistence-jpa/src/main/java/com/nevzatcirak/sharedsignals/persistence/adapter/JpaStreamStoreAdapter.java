@@ -3,6 +3,7 @@ package com.nevzatcirak.sharedsignals.persistence.adapter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nevzatcirak.sharedsignals.api.constant.SharedSignalConstants;
+import com.nevzatcirak.sharedsignals.api.enums.SubjectStatus;
 import com.nevzatcirak.sharedsignals.api.exception.*;
 import com.nevzatcirak.sharedsignals.api.model.StreamConfiguration;
 import com.nevzatcirak.sharedsignals.api.model.StreamDelivery;
@@ -67,6 +68,53 @@ public class JpaStreamStoreAdapter implements StreamStore {
 
     @Override
     @Transactional
+    public void addSubject(String streamId, Map<String, Object> subject, boolean verified) {
+        StreamEntity stream = streamRepository.findById(streamId).orElseThrow(() -> new StreamNotFoundException(streamId));
+        String subjectHash = subjectHashUtil.computeHash(subject);
+        if (subjectRepository.existsByStreamStreamIdAndSubjectHash(streamId, subjectHash)) {
+            throw new SubjectAlreadyExistsException("Subject already exists in stream: " + streamId);
+        }
+        SubjectEntity subjectEntity = new SubjectEntity();
+        subjectEntity.setStream(stream);
+        subjectEntity.setSubjectPayload(serializeSubject(subject));
+        subjectEntity.setSubjectHash(subjectHash);
+
+        //Verified is ignored due to security concern (SSF 9.2. Information Harvesting)
+        subjectEntity.setStatus(SubjectStatus.PENDING);
+
+        subjectRepository.save(subjectEntity);
+        log.info("Subject added to stream {} with status {}", streamId, subjectEntity.getStatus());
+    }
+
+    @Override
+    @Transactional
+    public void updateSubjectStatus(String streamId, String subjectHash, SubjectStatus status) {
+        SubjectEntity subject = subjectRepository.findByStreamStreamIdAndSubjectHash(streamId, subjectHash)
+                .orElseThrow(() -> new SsfBadRequestException("Subject not found or hash mismatch"));
+
+        subject.setStatus(status);
+        subjectRepository.save(subject);
+        log.info("Subject status updated to {} for stream {}", status, streamId);
+    }
+
+    @Override
+    @Transactional
+    public void updateAuthorizedEvents(String streamId, Set<String> authorizedEvents) {
+        StreamEntity stream = streamRepository.findById(streamId)
+                .orElseThrow(() -> new StreamNotFoundException(streamId));
+
+        stream.setEventsAuthorized(new HashSet<>(authorizedEvents));
+
+        Set<String> delivered = new HashSet<>(stream.getEventsRequested());
+        delivered.retainAll(authorizedEvents);
+        stream.setEventsDelivered(delivered);
+
+        streamRepository.save(stream);
+    }
+
+
+    @Override
+    @Transactional
     public StreamConfiguration save(StreamConfiguration model) {
         StreamEntity entity;
         if (model.getStream_id() != null) {
@@ -108,9 +156,23 @@ public class JpaStreamStoreAdapter implements StreamStore {
             entity.getEventsRequested().clear();
         }
 
-        if (model.getEvents_delivered() != null) {
-            entity.setEventsDelivered(new HashSet<>(model.getEvents_delivered()));
+        if (entity.getEventsAuthorized().isEmpty() && model.getEvents_requested() != null) {
+             entity.setEventsAuthorized(new HashSet<>(model.getEvents_requested()));
         }
+
+        Set<String> intersection = new HashSet<>(entity.getEventsRequested());
+        intersection.retainAll(entity.getEventsAuthorized());
+        entity.setEventsDelivered(intersection);
+    }
+
+    @Override
+    @Transactional
+    public void updateStreamMode(String streamId, boolean processAllSubjects) {
+        StreamEntity stream = streamRepository.findById(streamId)
+                .orElseThrow(() -> new StreamNotFoundException(streamId));
+        stream.setProcessAllSubjects(processAllSubjects);
+        streamRepository.save(stream);
+        log.info("Stream {} processAllSubjects mode updated to {}", streamId, processAllSubjects);
     }
 
     @Override
@@ -133,27 +195,6 @@ public class JpaStreamStoreAdapter implements StreamStore {
     public List<StreamConfiguration> findStreamsBySubject(Map<String, Object> subject) {
         String hash = subjectHashUtil.computeHash(subject);
         return streamRepository.findEnabledStreamsBySubjectHash(hash).stream().map(this::toModel).collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional
-    public void addSubject(String streamId, Map<String, Object> subject, boolean verified) {
-        StreamEntity stream = streamRepository.findById(streamId)
-                .orElseThrow(() -> new StreamNotFoundException(streamId));
-
-        String subjectHash = subjectHashUtil.computeHash(subject);
-
-        if (subjectRepository.existsByStreamStreamIdAndSubjectHash(streamId, subjectHash)) {
-            throw new SubjectAlreadyExistsException("Subject already exists in stream: " + streamId);
-        }
-
-        SubjectEntity subjectEntity = new SubjectEntity();
-        subjectEntity.setStream(stream);
-        subjectEntity.setSubjectPayload(serializeSubject(subject));
-        subjectEntity.setSubjectHash(subjectHash);
-        subjectEntity.setVerified(verified);
-
-        subjectRepository.save(subjectEntity);
     }
 
     @Override
@@ -245,8 +286,7 @@ public class JpaStreamStoreAdapter implements StreamStore {
 
     @Override
     public boolean hasMoreEvents(String streamId) {
-        long count = streamEventRepository.countByStreamIdAndAcknowledgedFalse(streamId);
-        return count > 0;
+        return countUnacknowledgedEvents(streamId) > 0;
     }
 
     @Override
@@ -284,14 +324,14 @@ public class JpaStreamStoreAdapter implements StreamStore {
             model.setDelivery(delivery);
         }
 
-        if (entity.getEventsRequested() != null) {
-            model.setEvents_requested(new ArrayList<>(entity.getEventsRequested()));
-        }
 
-        if (entity.getEventsDelivered() != null && !entity.getEventsDelivered().isEmpty()) {
-            model.setEvents_delivered(new ArrayList<>(entity.getEventsDelivered()));
-        } else if (entity.getEventsRequested() != null) {
+        if (entity.getEventsRequested() != null)
             model.setEvents_requested(new ArrayList<>(entity.getEventsRequested()));
+
+        if (entity.getEventsDelivered() != null) {
+            model.setEvents_delivered(new ArrayList<>(entity.getEventsDelivered()));
+        } else {
+            model.setEvents_delivered(new ArrayList<>());
         }
 
         model.setEvents_supported(SharedSignalConstants.SUPPORTED_EVENTS);

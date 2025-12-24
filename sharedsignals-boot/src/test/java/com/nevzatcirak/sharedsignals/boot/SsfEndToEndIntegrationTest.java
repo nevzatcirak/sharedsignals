@@ -7,13 +7,14 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.nevzatcirak.sharedsignals.api.constant.SecurityConstants;
 import com.nevzatcirak.sharedsignals.api.constant.SharedSignalConstants;
 import com.nevzatcirak.sharedsignals.api.model.StreamConfiguration;
+import com.nevzatcirak.sharedsignals.api.service.PushQueueService;
 import com.nevzatcirak.sharedsignals.boot.config.TestSecurityConfig;
 import com.nevzatcirak.sharedsignals.persistence.entity.StreamEntity;
 import com.nevzatcirak.sharedsignals.persistence.repository.PushMessageRepository;
 import com.nevzatcirak.sharedsignals.persistence.repository.StreamEventRepository;
 import com.nevzatcirak.sharedsignals.persistence.repository.StreamRepository;
+import com.nevzatcirak.sharedsignals.persistence.util.SubjectHashUtil;
 import com.nevzatcirak.sharedsignals.web.scheduler.PushDeliveryScheduler;
-import com.nevzatcirak.sharedsignals.api.service.PushQueueService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,28 +31,23 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-// WireMock static imports
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-
-// AssertJ
-import static org.assertj.core.api.Assertions.assertThat;
-
-// Awaitility
 import static org.awaitility.Awaitility.await;
-
-// MockMvc Builders & Matchers
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
 @Import({TestSecurityConfig.class, SsfEndToEndIntegrationTest.SchedulerConfig.class})
@@ -74,6 +70,9 @@ public class SsfEndToEndIntegrationTest {
 
     @Autowired
     private PushDeliveryScheduler pushDeliveryScheduler;
+
+    @Autowired
+    private SubjectHashUtil subjectHashUtil;
 
     private static WireMockServer wireMockServer;
     private static final String CLIENT_ID = "test-client-1";
@@ -153,18 +152,37 @@ public class SsfEndToEndIntegrationTest {
                         .content(objectMapper.writeValueAsString(addSubjectRequest)))
                 .andExpect(status().isOk());
 
-        // 3. TRIGGER VERIFICATION
-        Map<String, Object> verifyRequest = new HashMap<>();
-        verifyRequest.put("stream_id", streamId);
-        verifyRequest.put("state", "test-state-123");
+        // 3. ADMIN APPROVAL
+        // Calculate hash to call Admin API
+        String subjectHash = subjectHashUtil.computeHash(subject);
+        Map<String, String> approvalRequest = Map.of(
+            "subject_hash", subjectHash,
+            "status", "approved"
+        );
 
+        mockMvc.perform(put("/admin/stream/{streamId}/subject/status", streamId)
+                .requestAttr(SecurityConstants.ATTRIBUTE_CLIENT_ID, CLIENT_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(approvalRequest)))
+                .andExpect(status().isOk());
+
+        // 4. TRIGGER VERIFICATION
         mockMvc.perform(post("/ssf/verification")
-                        .requestAttr(SecurityConstants.ATTRIBUTE_CLIENT_ID, CLIENT_ID)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(verifyRequest)))
+                .requestAttr(SecurityConstants.ATTRIBUTE_CLIENT_ID, CLIENT_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                    "stream_id", streamId,
+                    "subject", subject
+                ))))
                 .andExpect(status().isNoContent());
 
-        // 4. INGEST REAL EVENT (Async)
+        // Wait for Push Delivery (Async)
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            verify(postRequestedFor(urlEqualTo("/receiver/events"))
+                    .withHeader("Content-Type", containing("application/secevent+jwt")));
+        });
+
+        // 5. INGEST REAL EVENT (Async)
         Map<String, Object> ingestRequest = new HashMap<>();
         ingestRequest.put("subject", subject);
 
@@ -175,6 +193,7 @@ public class SsfEndToEndIntegrationTest {
         ingestRequest.put("data", data);
 
         MvcResult ingestResult = mockMvc.perform(post("/api/v1/ingest")
+                        .requestAttr(SecurityConstants.ATTRIBUTE_CLIENT_ID, CLIENT_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(ingestRequest)))
                 .andExpect(request().asyncStarted())

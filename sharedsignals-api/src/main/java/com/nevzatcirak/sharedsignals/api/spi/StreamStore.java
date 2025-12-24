@@ -1,5 +1,6 @@
 package com.nevzatcirak.sharedsignals.api.spi;
 
+import com.nevzatcirak.sharedsignals.api.enums.SubjectStatus;
 import com.nevzatcirak.sharedsignals.api.model.RemoveSubjectCommand;
 import com.nevzatcirak.sharedsignals.api.model.StreamConfiguration;
 
@@ -7,6 +8,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * SPI Port for persisting stream data and buffering poll events.
@@ -27,6 +29,13 @@ public interface StreamStore {
     List<StreamConfiguration> findByAudience(String audience);
 
     List<StreamConfiguration> findStreamsBySubject(Map<String, Object> subject);
+
+    //  ========== Admin Operations ==========
+    void updateAuthorizedEvents(String streamId, Set<String> authorizedEvents);
+
+    void updateSubjectStatus(String streamId, String subjectHash, SubjectStatus status);
+
+    void updateStreamMode(String streamId, boolean processAllSubjects);
 
     // ========== Subject Management ==========
 

@@ -102,4 +102,9 @@ public class SharedSignalsCoreConfiguration {
     public EventIngestionService eventIngestionService(EventPublisherService eventPublisherService, SecurityEventMapper mapper) {
         return new DefaultEventIngestionService(eventPublisherService, mapper);
     }
+
+    @Bean
+    public StreamAdministrationService streamAdministrationService(StreamStore streamStore) {
+        return new DefaultStreamAdministrationService(streamStore);
+    }
 }

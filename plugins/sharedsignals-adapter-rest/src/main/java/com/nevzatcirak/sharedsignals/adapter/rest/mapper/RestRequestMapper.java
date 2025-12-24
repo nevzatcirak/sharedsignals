@@ -33,7 +33,7 @@ public class RestRequestMapper {
     public GenericSecurityEvent toDomain(RestIngestRequest request) {
         SecurityIntent intent;
         try {
-            intent = SecurityIntent.valueOf(request.data().intent());
+            intent = SecurityIntent.fromValue(request.data().intent().toLowerCase());
         } catch (IllegalArgumentException e) {
             // Convert generic Java exception to Domain Specific Exception (HTTP 400)
             throw new SsfBadRequestException(SsfErrorCode.MALFORMED_REQUEST, "Invalid Security Intent: " + request.data().intent());
@@ -41,10 +41,8 @@ public class RestRequestMapper {
 
         Map<String, Object> subjectMap = objectMapper.convertValue(request.subject(), Map.class);
 
-        // Convert the Payload Record to a Map
         Map<String, Object> payloadMap = objectMapper.convertValue(request.data(), Map.class);
 
-        // Remove the discriminator field as it is redundant in the internal map
         payloadMap.remove("intent");
 
         return new GenericSecurityEvent(intent, subjectMap, payloadMap, request.occurrenceTime());

@@ -1,5 +1,8 @@
 package com.nevzatcirak.sharedsignals.persistence.entity;
+
+import com.nevzatcirak.sharedsignals.api.enums.SubjectStatus;
 import jakarta.persistence.*;
+import java.util.Objects;
 
 /**
  * JPA Entity for Subjects monitored by a stream.
@@ -21,35 +24,33 @@ public class SubjectEntity {
     @Column(name = "subject_hash", nullable = false)
     private String subjectHash;
 
-    @Column(name = "verified", nullable = false)
-    private boolean verified = true;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private SubjectStatus status = SubjectStatus.PENDING;
 
+    public SubjectEntity() {}
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public StreamEntity getStream() { return stream; }
     public void setStream(StreamEntity stream) { this.stream = stream; }
-    public void setSubjectPayload(String subjectPayload) { this.subjectPayload = subjectPayload; }
+    public String getSubjectHash() { return subjectHash; }
     public void setSubjectHash(String subjectHash) { this.subjectHash = subjectHash; }
-    public void setVerified(boolean verified) { this.verified = verified; }
+    public String getSubjectPayload() { return subjectPayload; }
+    public void setSubjectPayload(String subjectPayload) { this.subjectPayload = subjectPayload; }
+    public SubjectStatus getStatus() { return status; }
+    public void setStatus(SubjectStatus status) { this.status = status; }
 
-    public Long getId() {
-        return id;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof SubjectEntity that)) return false;
+        return Objects.equals(getSubjectHash(), that.getSubjectHash()) &&
+               Objects.equals(getStream().getStreamId(), that.getStream().getStreamId());
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public StreamEntity getStream() {
-        return stream;
-    }
-
-    public String getSubjectPayload() {
-        return subjectPayload;
-    }
-
-    public String getSubjectHash() {
-        return subjectHash;
-    }
-
-    public boolean isVerified() {
-        return verified;
+    @Override
+    public int hashCode() {
+        return Objects.hash(getStream().getStreamId(), getSubjectHash());
     }
 }

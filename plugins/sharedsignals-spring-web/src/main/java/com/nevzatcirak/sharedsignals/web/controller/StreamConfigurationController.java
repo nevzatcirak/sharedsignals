@@ -1,5 +1,6 @@
 package com.nevzatcirak.sharedsignals.web.controller;
 
+import com.nevzatcirak.sharedsignals.api.exception.SsfBadRequestException;
 import com.nevzatcirak.sharedsignals.api.facade.AuthFacade;
 import com.nevzatcirak.sharedsignals.api.model.StreamConfiguration;
 import com.nevzatcirak.sharedsignals.api.service.StreamConfigurationService;
@@ -135,11 +136,11 @@ public class StreamConfigurationController {
     })
     public ResponseEntity<StreamConfiguration> replaceStream(@RequestBody StreamConfiguration body) {
         if (body.getStream_id() == null || body.getStream_id().isBlank()) {
-            return ResponseEntity.badRequest().build();
+            throw new SsfBadRequestException("stream_id is required for update.");
         }
 
         if (body.getEvents_requested() != null && body.getEvents_requested().isEmpty()) {
-            return ResponseEntity.badRequest().build();
+            throw new SsfBadRequestException("events_requested cannot be empty.");
         }
 
         return ResponseEntity.ok()
@@ -164,11 +165,11 @@ public class StreamConfigurationController {
     })
     public ResponseEntity<StreamConfiguration> updateStream(@RequestBody StreamConfiguration body) {
         if (body.getStream_id() == null || body.getStream_id().isEmpty()) {
-            return ResponseEntity.badRequest().build();
+            throw new SsfBadRequestException("stream_id is required.");
         }
 
         if (body.getEvents_requested() != null && body.getEvents_requested().isEmpty()) {
-            return ResponseEntity.badRequest().build();
+            throw new SsfBadRequestException("events_requested is required.");
         }
 
         return ResponseEntity.ok()

@@ -26,6 +26,10 @@ public class StreamEntity {
     @Column(name = "event_type_uri")
     private Set<String> eventsRequested = new HashSet<>();
     @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "stream_events_authorized", joinColumns = @JoinColumn(name = "stream_id"))
+    @Column(name = "event_type")
+    private Set<String> eventsAuthorized = new HashSet<>();
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "ssf_stream_events_delivered", joinColumns = @JoinColumn(name = "stream_id"))
     @Column(name = "event_type_uri")
     private Set<String> eventsDelivered = new HashSet<>();
@@ -46,6 +50,9 @@ public class StreamEntity {
     private Instant createdAt;
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @Column(name = "process_all_subjects", nullable = false)
+    private boolean processAllSubjects = false;
 
     @PrePersist
     protected void onCreate() {
@@ -76,6 +83,10 @@ public class StreamEntity {
     public void setDelivery(DeliveryEmbeddable delivery) { this.delivery = delivery; }
     public Set<String> getEventsRequested() { return eventsRequested; }
     public void setEventsRequested(Set<String> eventsRequested) { this.eventsRequested = eventsRequested; }
+
+    public Set<String> getEventsAuthorized() { return eventsAuthorized; }
+    public void setEventsAuthorized(Set<String> eventsAuthorized) { this.eventsAuthorized = eventsAuthorized; }
+
     public Set<String> getEventsDelivered() { return eventsDelivered; }
     public void setEventsDelivered(Set<String> eventsDelivered) { this.eventsDelivered = eventsDelivered; }
     public String getDescription() { return description; }
@@ -91,4 +102,6 @@ public class StreamEntity {
     public Long getVersion() { return version; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public boolean isProcessAllSubjects() { return processAllSubjects; }
+    public void setProcessAllSubjects(boolean processAllSubjects) { this.processAllSubjects = processAllSubjects; }
 }

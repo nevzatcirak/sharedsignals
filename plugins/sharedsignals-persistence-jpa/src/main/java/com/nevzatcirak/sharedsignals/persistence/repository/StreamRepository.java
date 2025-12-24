@@ -10,8 +10,16 @@ import java.util.List;
 public interface StreamRepository extends JpaRepository<StreamEntity, String> {
     List<StreamEntity> findByAudience(String audience);
 
-    // Find enabled streams that have a matching subject entry
-    @Query("SELECT s FROM StreamEntity s JOIN SubjectEntity sub ON s.streamId = sub.stream.streamId " +
-           "WHERE s.status = 'enabled' AND sub.subjectHash = :subjectHash")
+    // Return streams that match the subject hash (and are APPROVED)
+    // OR streams that are configured to process ALL subjects (Wildcard Mode).
+    // Uses DISTINCT because a stream could potentially match both conditions (though unlikely in logic).
+    @Query("SELECT DISTINCT s FROM StreamEntity s " +
+           "LEFT JOIN SubjectEntity sub ON s.streamId = sub.stream.streamId AND sub.subjectHash = :subjectHash " +
+           "WHERE s.status = 'enabled' " +
+           "AND (" +
+           "   (s.processAllSubjects = true) " +
+           "   OR " +
+           "   (sub.subjectHash IS NOT NULL AND sub.status = 'APPROVED')" +
+           ")")
     List<StreamEntity> findEnabledStreamsBySubjectHash(@Param("subjectHash") String subjectHash);
 }
