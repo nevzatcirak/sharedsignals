@@ -74,13 +74,25 @@ public class DefaultEventPublisherService implements EventPublisherService {
                                  SharedSignalConstants.SSF_STREAM_UPDATED.equals(eventTypeUri);
 
         if (!isControlEvent) {
-            boolean isRegistered = streamStore.isSubjectRegistered(stream.getStream_id(), subject);
-            boolean isInGracePeriod = streamStore.isSubjectInGracePeriod(stream.getStream_id(), subject);
+            boolean isBroadcastMode = stream.isProcessAllSubjects();
+            boolean isApproved = false;
+            boolean isInGracePeriod = false;
 
-            if (!isRegistered && !isInGracePeriod) {
-                log.debug("Subject not registered and not in grace period for stream: {}", stream.getStream_id());
+            if (isBroadcastMode) {
+                log.debug("Stream {} is in Broadcast Mode. Skipping explicit subject registration check.", stream.getStream_id());
+                isApproved = true;
+            } else {
+                isApproved = streamStore.isSubjectApproved(stream.getStream_id(), subject);
+                if (!isApproved) {
+                    isInGracePeriod = streamStore.isSubjectInGracePeriod(stream.getStream_id(), subject);
+                }
+            }
+
+            if (!isApproved && !isInGracePeriod) {
+                log.debug("Event rejected. Subject not approved/registered and not in grace period. Stream: {}", stream.getStream_id());
                 return;
             }
+
             if (isInGracePeriod) {
                 log.info("Sending event for subject in grace period (SSF 9.3): stream={}", stream.getStream_id());
             }

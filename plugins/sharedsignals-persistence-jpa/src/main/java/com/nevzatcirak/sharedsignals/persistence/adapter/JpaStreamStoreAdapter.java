@@ -241,6 +241,16 @@ public class JpaStreamStoreAdapter implements StreamStore {
         return subjectRepository.existsByStreamStreamIdAndSubjectHash(streamId, subjectHashUtil.computeHash(subject));
     }
 
+
+    @Override
+    public boolean isSubjectApproved(String streamId, Map<String, Object> subject) {
+        String hash = subjectHashUtil.computeHash(subject);
+        return subjectRepository.findByStreamStreamIdAndSubjectHash(streamId, hash)
+                .map(s -> s.getStatus() == SubjectStatus.APPROVED)
+                .orElse(false);
+    }
+
+    // --- POLL METHODS ---
     @Override
     public void saveEvent(String streamId, String jti, String setToken) {
         log.debug("Saving event to buffer: stream={}, jti={}", streamId, jti);
@@ -315,6 +325,8 @@ public class JpaStreamStoreAdapter implements StreamStore {
 
         model.setStatus(entity.getStatus());
         model.setReason(entity.getStatusReason());
+
+        model.setProcessAllSubjects(entity.isProcessAllSubjects());
 
         if (entity.getDelivery() != null) {
             StreamDelivery delivery = new StreamDelivery();

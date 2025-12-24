@@ -69,6 +69,8 @@ public interface StreamStore {
      */
     boolean isSubjectRegistered(String streamId, Map<String, Object> subject);
 
+    boolean isSubjectApproved(String streamId, Map<String, Object> subject);
+
     /**
      * Checks if a subject is in grace period after removal.
      * <p>

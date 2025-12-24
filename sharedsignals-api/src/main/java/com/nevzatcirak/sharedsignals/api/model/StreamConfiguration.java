@@ -24,6 +24,9 @@ public class StreamConfiguration {
     private String status;
     private String reason;
 
+    private boolean processAllSubjects = false;
+
+    // Getters and Setters
     public String getStream_id() { return stream_id; }
     public void setStream_id(String stream_id) { this.stream_id = stream_id; }
     public String getIss() { return iss; }
@@ -48,4 +51,7 @@ public class StreamConfiguration {
     public void setStatus(String status) { this.status = status; }
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }
+
+    public boolean isProcessAllSubjects() { return processAllSubjects; }
+    public void setProcessAllSubjects(boolean processAllSubjects) { this.processAllSubjects = processAllSubjects; }
 }
