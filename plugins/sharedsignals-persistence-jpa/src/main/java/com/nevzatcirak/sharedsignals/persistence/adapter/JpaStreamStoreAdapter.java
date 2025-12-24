@@ -194,7 +194,7 @@ public class JpaStreamStoreAdapter implements StreamStore {
     @Override
     public List<StreamConfiguration> findStreamsBySubject(Map<String, Object> subject) {
         String hash = subjectHashUtil.computeHash(subject);
-        return streamRepository.findEnabledStreamsBySubjectHash(hash).stream().map(this::toModel).collect(Collectors.toList());
+        return streamRepository.findEnabledStreamsBySubjectHash(hash).stream().map(s -> toModel(s)).collect(Collectors.toList());
     }
 
     @Override
