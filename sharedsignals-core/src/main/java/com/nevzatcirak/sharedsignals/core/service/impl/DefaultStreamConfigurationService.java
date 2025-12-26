@@ -21,6 +21,7 @@ public class DefaultStreamConfigurationService implements StreamConfigurationSer
     private final StreamStore streamStore;
     private final String issuerUrl;
     private final int defaultInactivityTimeout;
+    private final int defaultMinVerificationInterval;
     private final boolean allowMultipleStreamsPerReceiver;
     private final int maxDescriptionLength;
     private final InactivityTimeoutService inactivityService;
@@ -29,12 +30,14 @@ public class DefaultStreamConfigurationService implements StreamConfigurationSer
             StreamStore streamStore,
             String issuerUrl,
             int defaultInactivityTimeout,
+            int defaultMinVerificationInterval,
             boolean allowMultipleStreamsPerReceiver,
             int maxDescriptionLength,
             InactivityTimeoutService inactivityService) {
         this.streamStore = streamStore;
         this.issuerUrl = issuerUrl.endsWith("/") ? issuerUrl.substring(0, issuerUrl.length() - 1) : issuerUrl;
         this.defaultInactivityTimeout = defaultInactivityTimeout;
+        this.defaultMinVerificationInterval = defaultMinVerificationInterval;
         this.allowMultipleStreamsPerReceiver = allowMultipleStreamsPerReceiver;
         this.maxDescriptionLength = maxDescriptionLength;
         this.inactivityService = inactivityService;
@@ -59,7 +62,7 @@ public class DefaultStreamConfigurationService implements StreamConfigurationSer
     request.setAud(audience);
 
     request.setEvents_supported(SharedSignalConstants.SUPPORTED_EVENTS);
-    request.setMin_verification_interval(30);
+    request.setMin_verification_interval(defaultMinVerificationInterval);
     request.setInactivity_timeout(this.defaultInactivityTimeout);
 
     // Truncate if exceeds max length (Transmitter's policy)
@@ -135,7 +138,7 @@ public class DefaultStreamConfigurationService implements StreamConfigurationSer
         // Set Transmitter-Supplied properties
         put.setIss(this.issuerUrl);
         put.setEvents_supported(SharedSignalConstants.SUPPORTED_EVENTS);
-        put.setMin_verification_interval(30);
+        put.setMin_verification_interval(defaultMinVerificationInterval);
         put.setInactivity_timeout(this.defaultInactivityTimeout);
 
         // Truncate description if needed

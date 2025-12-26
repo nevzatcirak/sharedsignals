@@ -145,6 +145,9 @@ sharedsignals:
     # Max allowed length for stream descriptions (Input Validation).
     max-description-length: 255
 
+    # Verification event request frequency in second
+    min-verification-interval: 1
+
   # ----------------------------------------------------------------------------
   # 6. FEATURE FLAGS (Toggles)
   # ----------------------------------------------------------------------------

@@ -19,12 +19,13 @@ public class SharedSignalsCoreConfiguration {
             StreamStore streamStore,
             @Value("${sharedsignals.issuer}") String issuerUrl,
             @Value("${sharedsignals.defaults.inactivity-timeout:2592000}") int defaultInactivityTimeout,
+            @Value("${sharedsignals.defaults.min-verification-interval:1}") int defaultMinVerificationInterval,
             @Value("${sharedsignals.features.multi-stream-per-receiver:false}") boolean allowMultipleStreams,
             @Value("${sharedsignals.defaults.max-description-length:255}") int maxDescriptionLength,
             InactivityTimeoutService inactivityService)
     {
         return new DefaultStreamConfigurationService(
-                streamStore, issuerUrl, defaultInactivityTimeout,
+                streamStore, issuerUrl, defaultInactivityTimeout, defaultMinVerificationInterval,
                 allowMultipleStreams, maxDescriptionLength, inactivityService
         );
     }
