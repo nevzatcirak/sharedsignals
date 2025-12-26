@@ -37,11 +37,10 @@ public class DefaultTransmitterMetadataService implements TransmitterMetadataSer
         md.setCritical_subject_members(List.of("format"));
         md.setDefault_subjects(SharedSignalConstants.DEFAULT_SUBJECT_MODE);
 
-        /*TransmitterMetadata.AuthorizationScheme authScheme = new TransmitterMetadata.AuthorizationScheme(
-            SharedSignalConstants.SPEC_URN_OAUTH_2,
-            List.of("ssf-mgmt")
+        TransmitterMetadata.AuthorizationScheme authScheme = new TransmitterMetadata.AuthorizationScheme(
+            SharedSignalConstants.SPEC_URN_OAUTH_2
         );
-        md.setAuthorization_schemes(List.of(authScheme));*/
+        md.setAuthorization_schemes(List.of(authScheme));
 
         return md;
     }

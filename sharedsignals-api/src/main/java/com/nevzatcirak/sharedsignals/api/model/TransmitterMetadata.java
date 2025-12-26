@@ -26,17 +26,13 @@ public class TransmitterMetadata {
      */
     public static class AuthorizationScheme {
         private String spec_urn;
-        private List<String> scope;
 
         public AuthorizationScheme() {}
-        public AuthorizationScheme(String spec_urn, List<String> scope) {
+        public AuthorizationScheme(String spec_urn) {
             this.spec_urn = spec_urn;
-            this.scope = scope;
         }
         public String getSpec_urn() { return spec_urn; }
         public void setSpec_urn(String spec_urn) { this.spec_urn = spec_urn; }
-        public List<String> getScope() { return scope; }
-        public void setScope(List<String> scope) { this.scope = scope; }
     }
     
     public String getSpec_version() { return spec_version; }

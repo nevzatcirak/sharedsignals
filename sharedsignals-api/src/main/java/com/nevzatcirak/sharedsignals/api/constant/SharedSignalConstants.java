@@ -8,6 +8,7 @@ public final class SharedSignalConstants {
     // --- Specifications & Protocols ---
     public static final String SPEC_VERSION_1_0 = "1_0";
     public static final String SPEC_URN_OAUTH_2 = "urn:ietf:rfc:6749";
+    public static final String SPEC_URN_MTLS = "urn:ietf:rfc:8705";
     public static final String MEDIA_TYPE_SECEVENT_JWT = "application/secevent+jwt";
     public static final String JWT_TYPE_SECEVENT = "secevent+jwt";
 
