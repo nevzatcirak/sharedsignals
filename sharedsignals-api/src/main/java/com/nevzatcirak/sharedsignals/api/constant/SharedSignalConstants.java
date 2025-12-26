@@ -69,7 +69,6 @@ public final class SharedSignalConstants {
 
     public static final String RISC_RECOVERY_ACTIVATED = "https://schemas.openid.net/secevent/risc/event-type/recovery-activated";
     public static final String RISC_RECOVERY_INFORMATION_CHANGED = "https://schemas.openid.net/secevent/risc/event-type/recovery-information-changed";
-    public static final String RISC_VERIFICATION = "https://schemas.openid.net/secevent/risc/event-type/verification";
 
     // --- SSF Events ---
     public static final String SSF_VERIFICATION = "https://schemas.openid.net/secevent/ssf/event-type/verification";
@@ -98,7 +97,6 @@ public final class SharedSignalConstants {
         RISC_OPT_OUT_EFFECTIVE,
         RISC_RECOVERY_ACTIVATED,
         RISC_RECOVERY_INFORMATION_CHANGED,
-        RISC_VERIFICATION,
 
         SSF_VERIFICATION,
         SSF_STREAM_UPDATED

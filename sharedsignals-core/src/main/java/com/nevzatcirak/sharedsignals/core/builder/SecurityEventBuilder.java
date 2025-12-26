@@ -27,7 +27,7 @@ public class SecurityEventBuilder {
         details.put("event_timestamp", Instant.now().toEpochMilli());
 
         Map<String, Object> eventsClaim = new HashMap<>();
-        eventsClaim.put(SharedSignalConstants.RISC_VERIFICATION, details);
+        eventsClaim.put(SharedSignalConstants.SSF_VERIFICATION, details);
         return eventsClaim;
     }
 
