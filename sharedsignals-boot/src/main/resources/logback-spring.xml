@@ -2,45 +2,84 @@
 <configuration>
     <springProperty scope="context" name="APP_VERSION" source="info.app.version" defaultValue="unknown"/>
     <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="shared-signals-transmitter"/>
+
     <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
             <providers>
-                <pattern>
-                    <pattern>
-                        {
-                        "timestamp": "%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z',UTC}",
-                        "severity": "%level",
+                <timestamp>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
 
-                        "service": {
-                            "name": "${APP_NAME}",
-                            "version": "${APP_VERSION}",
-                            "environment": "${spring.profiles.active:-default}"
-                        },
+                <logLevel>
+                    <fieldName>severity</fieldName>
+                </logLevel>
 
-                        "trace": {
-                            "trace_id": "%mdc{traceId}",
-                            "span_id": "%mdc{spanId}"
-                        },
+                <nestedField>
+                    <fieldName>service</fieldName>
+                    <providers>
+                        <pattern>
+                            <pattern>
+                                {
+                                "name": "${APP_NAME}",
+                                "version": "${APP_VERSION}",
+                                "environment": "${spring.profiles.active:-default}"
+                                }
+                            </pattern>
+                        </pattern>
+                    </providers>
+                </nestedField>
 
-                        "message": "%message",
+                <nestedField>
+                    <fieldName>trace</fieldName>
+                    <providers>
+                        <mdc>
+                            <includeMdcKeyName>traceId</includeMdcKeyName>
+                            <includeMdcKeyName>spanId</includeMdcKeyName>
+                            <attributeNameMapping>
+                                <oldName>traceId</oldName>
+                                <newName>trace_id</newName>
+                            </attributeNameMapping>
+                            <attributeNameMapping>
+                                <oldName>spanId</oldName>
+                                <newName>span_id</newName>
+                            </attributeNameMapping>
+                        </mdc>
+                    </providers>
+                </nestedField>
 
-                        "error": {
-                            "message": "%ex{0}",
-                            "stack_trace": "%ex{full}"
-                        },
+                <message>
+                    <fieldName>message</fieldName>
+                </message>
 
-                        "http": {
-                            "method": "%mdc{http_method}",
-                            "url": "%mdc{http_url}",
-                            "status_code": "%mdc{http_status_code}",
-                            "client_ip": "%mdc{client_ip}",
-                            "client_id": "%mdc{client_id}"
-                        },
+                <stackTrace>
+                    <fieldName>error</fieldName>
+                    <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                        <maxDepthPerThrowable>20</maxDepthPerThrowable>
+                        <maxLength>2048</maxLength>
+                        <shortenedClassNameLength>20</shortenedClassNameLength>
+                        <rootCauseFirst>true</rootCauseFirst>
+                    </throwableConverter>
+                </stackTrace>
 
-                        "stream_id": "%mdc{stream_id}"
-                        }
-                    </pattern>
-                </pattern>
+                <nestedField>
+                    <fieldName>http</fieldName>
+                    <providers>
+                        <mdc>
+                            <includeMdcKeyName>http_method</includeMdcKeyName>
+                            <includeMdcKeyName>http_url</includeMdcKeyName>
+                            <includeMdcKeyName>http_status_code</includeMdcKeyName>
+                            <includeMdcKeyName>client_ip</includeMdcKeyName>
+                            <includeMdcKeyName>client_id</includeMdcKeyName>
+                            <attributeNameMapping><oldName>http_method</oldName><newName>method</newName></attributeNameMapping>
+                            <attributeNameMapping><oldName>http_url</oldName><newName>url</newName></attributeNameMapping>
+                            <attributeNameMapping><oldName>http_status_code</oldName><newName>status_code</newName></attributeNameMapping>
+                        </mdc>
+                    </providers>
+                </nestedField>
+
+                <mdc>
+                    <includeMdcKeyName>stream_id</includeMdcKeyName>
+                </mdc>
             </providers>
         </encoder>
     </appender>
