@@ -13,6 +13,9 @@
 #     - Feature Flags (Toggles)
 #     - Scheduler (Timing)
 # ==============================================================================
+info:
+  app:
+    version: '@project.version@'
 
 server:
   port: 8080
@@ -23,25 +26,22 @@ spring:
 
   # --- DATABASE (H2 for Development / PostgreSQL for Production) ---
   datasource:
-    url: jdbc:h2:mem:sharedsignals;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driverClassName: org.h2.Driver
-    username: sa
-    password: password
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sharedsignals}
+    username: ${DB_USERNAME:ssf_user}
+    password: ${DB_PASSWORD:ssf_password}
+    driver-class-name: org.postgresql.Driver
 
   # --- JPA / HIBERNATE ---
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       # 'update' ensures tables (including 'shedlock' and 'ssf_push_queue') are created automatically
       ddl-auto: update
     show-sql: false
     properties:
-      hibernate:
-        format_sql: true
+      jdbc:
+        lob:
+          non_contextual_creation: true
 
   # --- OAUTH2 RESOURCE SERVER (Security) ---
   security:

@@ -1,10 +1,12 @@
 package com.nevzatcirak.sharedsignals.web.interceptor;
 
+import com.nevzatcirak.sharedsignals.api.constant.SecurityConstants;
 import com.nevzatcirak.sharedsignals.api.service.InactivityTimeoutService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -38,12 +40,33 @@ public class ActivityTrackingInterceptor implements HandlerInterceptor {
             String streamId = extractStreamId(request);
 
             if (streamId != null && !streamId.isBlank()) {
+                MDC.put("stream_id", streamId);
                 log.debug("Recording activity for stream: {} on endpoint: {}", streamId, uri);
                 inactivityService.recordActivity(streamId);
             }
         }
 
+        MDC.put("http_method", request.getMethod());
+        MDC.put("http_url", request.getRequestURI());
+        MDC.put("client_ip", request.getRemoteAddr());
+
+        String clientId = (String) request.getAttribute(SecurityConstants.ATTRIBUTE_CLIENT_ID);
+        if (clientId != null) {
+            MDC.put("client_id", clientId);
+        }
         return true;
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+        MDC.put("http_status_code", String.valueOf(response.getStatus()));
+
+        MDC.remove("stream_id");
+        MDC.remove("http_method");
+        MDC.remove("http_url");
+        MDC.remove("client_ip");
+        MDC.remove("user_id");
+        MDC.remove("http_status_code");
     }
 
     /**

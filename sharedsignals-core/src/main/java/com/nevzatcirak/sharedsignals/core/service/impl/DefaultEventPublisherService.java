@@ -146,7 +146,7 @@ public class DefaultEventPublisherService implements EventPublisherService {
                 String jti = SignedJWT.parse(token).getJWTClaimsSet().getJWTID();
                 streamStore.saveEvent(stream.getStream_id(), jti, token);
             } catch (ParseException e) {
-                log.error("Error parsing generated token: " + e.getMessage());
+                log.error("Error parsing generated token ", e);
             }
         }
     }
