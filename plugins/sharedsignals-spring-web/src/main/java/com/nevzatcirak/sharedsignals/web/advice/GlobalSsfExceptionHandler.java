@@ -1,6 +1,8 @@
 package com.nevzatcirak.sharedsignals.web.advice;
 
 import com.nevzatcirak.sharedsignals.api.exception.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -22,7 +24,7 @@ import java.util.stream.Collectors;
  */
 @RestControllerAdvice
 public class GlobalSsfExceptionHandler {
-
+    private static final Logger log = LoggerFactory.getLogger(GlobalSsfExceptionHandler.class);
     private final String issuerUrl;
 
     public GlobalSsfExceptionHandler(@Value("${sharedsignals.issuer}") String issuerUrl) {
@@ -115,7 +117,7 @@ public class GlobalSsfExceptionHandler {
     // --- Catch-All Fallback ---
     @ExceptionHandler(Exception.class)
     ProblemDetail handleUnknown(Exception e) {
-        e.printStackTrace();
+        log.error("An unexpected error occurred", e);
         return buildProblemDetail(HttpStatus.INTERNAL_SERVER_ERROR, SsfErrorCode.INTERNAL_ERROR, "An unexpected error occurred.");
     }
 

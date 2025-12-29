@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty scope="context" name="APP_VERSION" source="info.app.version" defaultValue="unknown"/>
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="shared-signals-transmitter"/>
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <pattern>
+                    <pattern>
+                        {
+                        "timestamp": "%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z',UTC}",
+                        "severity": "%level",
+
+                        "service": {
+                            "name": "${APP_NAME}",
+                            "version": "${APP_VERSION}",
+                            "environment": "${spring.profiles.active:-default}"
+                        },
+
+                        "trace": {
+                            "trace_id": "%mdc{traceId}",
+                            "span_id": "%mdc{spanId}"
+                        },
+
+                        "message": "%message",
+
+                        "error": {
+                            "message": "%ex{0}",
+                            "stack_trace": "%ex{full}"
+                        },
+
+                        "http": {
+                            "method": "%mdc{http_method}",
+                            "url": "%mdc{http_url}",
+                            "status_code": "%mdc{http_status_code}",
+                            "client_ip": "%mdc{client_ip}",
+                            "client_id": "%mdc{client_id}"
+                        },
+
+                        "stream_id": "%mdc{stream_id}"
+                        }
+                    </pattern>
+                </pattern>
+            </providers>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE_JSON"/>
+    </root>
+</configuration>

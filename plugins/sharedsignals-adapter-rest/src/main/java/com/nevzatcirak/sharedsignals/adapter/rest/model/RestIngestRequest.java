@@ -1,5 +1,6 @@
 package com.nevzatcirak.sharedsignals.adapter.rest.model;
 
+import com.nevzatcirak.sharedsignals.adapter.rest.model.subjects.RestSubject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
