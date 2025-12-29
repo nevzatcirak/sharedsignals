@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="ConsoleJson" target="SYSTEM_OUT">
+            <JsonTemplateLayout eventTemplateUri="classpath:Log4j2JsonLayout.json"/>
+        </Console>
+
+        <Console name="ConsolePlain" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} %highlight{%-5level} [%15.15t] %cyan{%-40.40logger{39}} : %msg%n%throwable"/>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="ConsoleJson"/>
+        </Root>
+
+        <SpringProfile name="develop | local">
+            <Root level="info">
+                <AppenderRef ref="ConsolePlain"/>
+            </Root>
+        </SpringProfile>
+    </Loggers>
+</Configuration>

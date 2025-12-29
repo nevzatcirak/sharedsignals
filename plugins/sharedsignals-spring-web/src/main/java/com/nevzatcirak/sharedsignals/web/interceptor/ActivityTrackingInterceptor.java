@@ -33,7 +33,6 @@ public class ActivityTrackingInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        // Track activity for SSF management endpoints
         String uri = request.getRequestURI();
 
         if (uri.startsWith("/ssf/")) {

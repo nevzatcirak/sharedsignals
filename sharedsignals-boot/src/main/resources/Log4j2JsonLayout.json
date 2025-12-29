@@ -1,0 +1,43 @@
+{
+  "timestamp": {
+    "$resolver": "timestamp",
+    "pattern": { "format": "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "timeZone": "UTC" }
+  },
+  "severity": {
+    "$resolver": "level",
+    "field": "name"
+  },
+  "service": {
+    "name": "${spring:spring.application.name}",
+    "version": "${spring:info.app.version}"
+  },
+  "trace": {
+    "trace_id": { "$resolver": "mdc", "key": "traceId" },
+    "span_id":  { "$resolver": "mdc", "key": "spanId" }
+  },
+  "message": {
+    "$resolver": "message",
+    "stringified": true
+  },
+  "error": {
+    "$resolver": "exception",
+    "field": "stackTrace",
+    "stackTrace": {
+      "stringified": {
+        "maxStringLength": 2048,
+        "truncatedStringSuffix": "..."
+      }
+    }
+  },
+  "http": {
+    "method": { "$resolver": "mdc", "key": "http_method" },
+    "url": { "$resolver": "mdc", "key": "http_url" },
+    "status_code": { "$resolver": "mdc", "key": "http_status_code" },
+    "client_ip": { "$resolver": "mdc", "key": "client_ip" },
+    "client_id": { "$resolver": "mdc", "key": "client_id" }
+  },
+  "stream_id": { "$resolver": "mdc", "key": "stream_id" },
+  "user": {
+    "id": { "$resolver": "mdc", "key": "user_id" }
+  }
+}
