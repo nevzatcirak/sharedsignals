@@ -3,7 +3,7 @@
 <p align="center">
   <img src="docs/logo.svg" alt="Project Logo" width="175">
   <br>
-  <i>The "Nervous System" for Modern Identity Security</i>
+  <i>The "Neuron System" for Modern Identity Security</i>
 </p>
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)

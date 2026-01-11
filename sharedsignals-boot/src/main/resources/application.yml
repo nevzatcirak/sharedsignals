@@ -194,12 +194,31 @@ sharedsignals:
     event-cleanup-cron: "0 0 2 * * ?"
 
 # ==============================================================================
+# METRICS CONFIGURATION
+# ==============================================================================
+management:
+  metrics:
+    tags:
+      service: ${spring.application.name}
+      service_instance_id: ${HOSTNAME:unknown}
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus,metrics"
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://otel-collector:4318/v1/traces
+
+# ==============================================================================
 # LOGGING CONFIGURATION
 # ==============================================================================
 logging:
   level:
     root: INFO
     # App Logs
-    com.nevzatcirak.sharedsignals: DEBUG
+    com.nevzatcirak.sharedsignals: INFO
     # Security Logs (Auth failures, etc.)
     org.springframework.security: INFO
